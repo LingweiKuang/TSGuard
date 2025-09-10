@@ -106,6 +106,14 @@ public class PrometheusStatement implements TSFuzzyStatement {
                     if (param.getStart() != null) instantQueryBuilder.withEpochTime(param.getStart());
                     targetUri = instantQueryBuilder.withQuery(param.getRequestBody()).build();
                     break;
+                case RANGE_QUERY:
+                    RangeQueryBuilder rangeQueryBuilder =
+                            QueryBuilderType.RangeQuery.newInstance(apiEntry.getTargetServer());
+                    if (param.getStart() != null) rangeQueryBuilder.withStartEpochTime(param.getStart());
+                    if (param.getEnd() != null) rangeQueryBuilder.withEndEpochTime(param.getEnd());
+                    if (param.getStep() != null) rangeQueryBuilder.withStepTime(String.valueOf(param.getStep()));
+                    targetUri = rangeQueryBuilder.withQuery(param.getRequestBody()).build();
+                    break;
 //                case series_delete:
 //                    SeriesDeleteBuilder deleteBuilder =
 //                            QueryBuilderType.SeriesDelete.newInstance(apiEntry.getTargetServer());
@@ -127,7 +135,7 @@ public class PrometheusStatement implements TSFuzzyStatement {
         CollectorRegistry.defaultRegistry.clear();
         PrometheusInsertParam param = JSONObject.parseObject(queryParam, PrometheusInsertParam.class);
         PushGateway pushGateway = new PushGateway(apiEntry.getPushGatewaySocket());
-        for (Entry<String, CollectorAttribute> entry : param.getCollectorList().entrySet()) {
+        for (Entry<String, CollectorAttribute> entry : param.getCollectorMap().entrySet()) {
 //            pushGateway.push(entry.getValue().transToCollector(), entry.getKey());
         }
         // 休眠1s, 等待Prometheus抓取
@@ -143,7 +151,8 @@ public class PrometheusStatement implements TSFuzzyStatement {
         headers.put("X-Prometheus-Remote-Write-Version", "2.0.0");
 
         // remote write
-        for (String metricName : param.getCollectorList().keySet()) {
+        for (String metricName : param.getCollectorMap().keySet()) {
+            log.info("远程写入值: {}", param.getCollectorMap().get(metricName));
             byte[] compressed = param.snappyCompressedRequest(metricName);
             assert HttpClientUtils.sendPointDataToDB(url, compressed, headers);
         }

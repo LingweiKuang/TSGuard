@@ -13,9 +13,7 @@ import com.fuzzy.influxdb.gen.*;
 import com.fuzzy.influxdb.gen.InfluxDBShowStatementGenerator.ShowStatementType;
 import com.fuzzy.influxdb.util.InfluxDBAuthorizationParams;
 import com.google.auto.service.AutoService;
-import org.apache.commons.lang3.StringUtils;
 
-import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -211,6 +209,8 @@ public class InfluxDBProvider extends SQLProviderAdapter<InfluxDBGlobalState, In
 
     @Override
     public void generateDatabase(InfluxDBGlobalState globalState) throws Exception {
+        // TODO 针对需要插入数据的表，提前执行 SamplingFrequencyManager.getInstance().addSamplingFrequency
+        // TODO 若原本数据库中已经存在表数据，那么将不会执行上述语句，需修改
         while (globalState.getSchema().getDatabaseTables().size() < Randomly.smallNumber() + 1) {
             String tableName = DBMSCommon.createTableName(globalState.getSchema().getMaxTableIndex() + 1);
             SQLQueryAdapter createTable = InfluxDBTableGenerator.generate(globalState, tableName);

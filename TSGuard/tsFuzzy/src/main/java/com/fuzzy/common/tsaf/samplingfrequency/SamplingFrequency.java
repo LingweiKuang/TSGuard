@@ -84,7 +84,8 @@ public class SamplingFrequency {
     public BigDecimal getSeqByTimestamp(long timestamp) {
         BigDecimal seq = binarySearchTimestamp(timestamp);
         if (seq.compareTo(BigDecimal.ZERO) != 0) return seq;
-        assert timestamp == 1641024000000L || timestamp == 1641024000000000L || timestamp == 1641024000000000000L;
+        // TODO Prometheus
+//        assert timestamp == 1641024000000L || timestamp == 1641024000000000L || timestamp == 1641024000000000000L;
         return BigDecimal.ONE;
     }
 

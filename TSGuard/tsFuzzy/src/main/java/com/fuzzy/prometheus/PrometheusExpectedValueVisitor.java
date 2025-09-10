@@ -111,31 +111,31 @@ public class PrometheusExpectedValueVisitor implements PrometheusVisitor {
         }
     }
 
-//    @Override
-//    public void visit(PrometheusUnaryNotPrefixOperation op) {
-//        if (!op.omitBracketsWhenPrinting()) {
-//            sb.append('(');
-//        }
-//        if (op.getOperatorKind() == OperatorKind.PREFIX) {
-//            sb.append(op.getOperatorRepresentation());
-//            sb.append(' ');
-//        }
-//        if (!op.omitBracketsWhenPrinting()) {
-//            sb.append('(');
-//        }
-//        visit(op.getExpression());
-//        if (!op.omitBracketsWhenPrinting()) {
-//            sb.append(')');
-//        }
-//        if (op.getOperatorKind() == OperatorKind.POSTFIX) {
-//            sb.append(' ');
-//            sb.append(op.getOperatorRepresentation());
-//        }
-//        if (!op.omitBracketsWhenPrinting()) {
-//            sb.append(')');
-//        }
-//    }
-//
+    @Override
+    public void visit(PrometheusUnaryNotPrefixOperation op) {
+        if (!op.omitBracketsWhenPrinting()) {
+            sb.append('(');
+        }
+        if (op.getOperatorKind() == OperatorKind.PREFIX) {
+            sb.append(op.getOperatorRepresentation());
+            sb.append(' ');
+        }
+        if (!op.omitBracketsWhenPrinting()) {
+            sb.append('(');
+        }
+        visit(op.getExpression());
+        if (!op.omitBracketsWhenPrinting()) {
+            sb.append(')');
+        }
+        if (op.getOperatorKind() == OperatorKind.POSTFIX) {
+            sb.append(' ');
+            sb.append(op.getOperatorRepresentation());
+        }
+        if (!op.omitBracketsWhenPrinting()) {
+            sb.append(')');
+        }
+    }
+
 //    @Override
 //    public void visit(PrometheusOrderByTerm op) {
 //

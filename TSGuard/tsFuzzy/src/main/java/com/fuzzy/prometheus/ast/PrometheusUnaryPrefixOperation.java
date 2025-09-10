@@ -69,4 +69,9 @@ public class PrometheusUnaryPrefixOperation extends UnaryOperatorNode<Prometheus
         return OperatorKind.PREFIX;
     }
 
+    @Override
+    public boolean isScalarExpression() {
+        return expr.isScalarExpression();
+    }
+
 }

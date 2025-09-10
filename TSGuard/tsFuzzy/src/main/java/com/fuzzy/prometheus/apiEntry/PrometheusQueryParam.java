@@ -18,10 +18,24 @@ public class PrometheusQueryParam {
         this.start = start;
     }
 
+    public PrometheusQueryParam(String requestBody, long start, long end) {
+        this.requestBody = requestBody;
+        // Prometheus 支持以秒级精度进行数据查询，step = 1 捞出所有数据
+        this.start = start / 1000;
+        this.end = end / 1000;
+        this.step = 1L;
+    }
+
     public PrometheusQueryParam(String requestBody) {
         this.requestBody = requestBody;
     }
 
+    /**
+     * 生成 JSON 格式查询参数
+     *
+     * @param type
+     * @return
+     */
     public String genPrometheusRequestParam(PrometheusRequestType type) {
         return JSONObject.toJSONString(new PrometheusRequestParam(type, JSONObject.toJSONString(this)));
     }

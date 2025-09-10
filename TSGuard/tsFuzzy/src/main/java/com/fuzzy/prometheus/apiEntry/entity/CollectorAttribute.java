@@ -49,7 +49,7 @@ public class CollectorAttribute {
         this.timestamps = Collections.singletonList(startTimestamp - 100 * 1000L);
     }
 
-    public void defaultValue() {
+    public void defaultValue(long startTimestamp) {
 //        switch (this.dataType) {
 //            case COUNTER:
 //                this.intValues = Collections.singletonList(0);
@@ -62,8 +62,8 @@ public class CollectorAttribute {
 //            default:
 //        }
         this.doubleValues = Collections.singletonList(0.0);
-        // 初始时间戳: 当前值 - 30s
-        this.timestamps = Collections.singletonList(System.currentTimeMillis() - 30 * 1000L);
+        // 初始时间戳: startTimestamp - 200s
+        this.timestamps = Collections.singletonList(startTimestamp - 200 * 1000L);
     }
 
     public Request createRequestForRemoteWrite() {

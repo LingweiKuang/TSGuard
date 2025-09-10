@@ -59,4 +59,8 @@ public class TDengineQuerySynthesisFeedbackManager {
     public static long incrementInvalidQueryCount() {
         return queryExecutionStatistical.incrementInvalidQueryCount();
     }
+
+    public static long incrementCalculateTimeOverhead(long calculateTimeOverhead) {
+        return queryExecutionStatistical.incrementCalculateTimeOverhead(calculateTimeOverhead);
+    }
 }

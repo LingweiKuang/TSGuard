@@ -37,12 +37,12 @@ public class PrometheusDatabaseGenerator {
         attribute.setMetricName(databaseName);
         attribute.setHelp(String.format("%s.%s.%s", databaseInitLabel, databaseInitLabel, databaseInitLabel));
         attribute.setTableName(databaseInitLabel);
-        attribute.defaultValue();
+        attribute.defaultValue(globalState.getOptions().getStartTimestampOfTSData());
 
         Map<String, CollectorAttribute> collectorMap = new HashMap<>();
         collectorMap.put(attribute.getMetricName(), attribute);
         PrometheusInsertParam insertParam = new PrometheusInsertParam();
-        insertParam.setCollectorList(collectorMap);
+        insertParam.setCollectorMap(collectorMap);
         return new SQLQueryAdapter((insertParam.genPrometheusQueryParam()), errors, true);
     }
 

@@ -16,6 +16,7 @@ public class PrometheusBinaryLogicalOperation implements PrometheusExpression {
         AND("AND") {
             @Override
             public PrometheusConstant apply(PrometheusConstant left, PrometheusConstant right) {
+                // TODO 矢量取交集
                 if (left.isNull() || right.isNull()) return PrometheusConstant.createNullConstant();
                 else return PrometheusConstant.createBoolean(left.asBooleanNotNull() && right.asBooleanNotNull());
             }
@@ -23,14 +24,21 @@ public class PrometheusBinaryLogicalOperation implements PrometheusExpression {
         OR("OR") {
             @Override
             public PrometheusConstant apply(PrometheusConstant left, PrometheusConstant right) {
-                // TODO
-//                if (left.isNull() && right.isNull()) return PrometheusConstant.createNullConstant();
-//                else if (left.isNull()) return PrometheusConstant.createBoolean(right.asBooleanNotNull());
-//                else if (right.isNull()) return PrometheusConstant.createBoolean(left.asBooleanNotNull());
-                if (left.isNull() || right.isNull()) return PrometheusConstant.createNullConstant();
+                // TODO 矢量取并集
+                if (left.isNull() && right.isNull()) return PrometheusConstant.createNullConstant();
+                else if (left.isNull()) return PrometheusConstant.createBoolean(right.asBooleanNotNull());
+                else if (right.isNull()) return PrometheusConstant.createBoolean(left.asBooleanNotNull());
                 else return PrometheusConstant.createBoolean(left.asBooleanNotNull() || right.asBooleanNotNull());
             }
-        };
+        },
+//        UNLESS("UNLESS") {
+//            @Override
+//            public PrometheusConstant apply(PrometheusConstant left, PrometheusConstant right) {
+//                // 矢量取补集
+//                return PrometheusConstant.createBoolean(true);
+//            }
+//        }
+        ;
 
         private final String[] textRepresentations;
 
@@ -83,12 +91,20 @@ public class PrometheusBinaryLogicalOperation implements PrometheusExpression {
 
     @Override
     public PrometheusConstant getExpectedValue() {
-        PrometheusConstant leftExpected = left.getExpectedValue();
-        PrometheusConstant rightExpected = right.getExpectedValue();
-        if (left.getExpectedValue() == null || right.getExpectedValue() == null) {
-            return null;
-        }
-        return op.apply(leftExpected, rightExpected);
+        // TODO 矢量运算 -> 返回值为集合
+        // TODO PQS 不支持通过该表达式获取结果
+        return left.getExpectedValue();
+//        PrometheusConstant leftExpected = left.getExpectedValue();
+//        PrometheusConstant rightExpected = right.getExpectedValue();
+//        if (left.getExpectedValue() == null || right.getExpectedValue() == null) {
+//            return null;
+//        }
+//        return op.apply(leftExpected, rightExpected);
+    }
+
+    @Override
+    public boolean isScalarExpression() {
+        return left.isScalarExpression() && right.isScalarExpression();
     }
 
     @Override

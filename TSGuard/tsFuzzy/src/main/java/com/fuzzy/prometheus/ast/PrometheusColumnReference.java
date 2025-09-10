@@ -30,4 +30,9 @@ public class PrometheusColumnReference implements PrometheusExpression {
         return value;
     }
 
+    @Override
+    public boolean isScalarExpression() {
+        return false;
+    }
+
 }

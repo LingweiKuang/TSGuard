@@ -62,7 +62,7 @@ public class PrometheusTableGenerator {
         }
 
         PrometheusInsertParam insertParam = new PrometheusInsertParam();
-        insertParam.setCollectorList(collectorMap);
+        insertParam.setCollectorMap(collectorMap);
         return new SQLQueryAdapter(insertParam.genPrometheusQueryParam(), errors, true);
     }
 

@@ -245,6 +245,10 @@ public class MainOptions {
         }
     }
 
+    public void setStartTimestampOfTSData(long startTimestampOfTSData) {
+        this.startTimestampOfTSData = startTimestampOfTSData;
+    }
+
     public long getSamplingFrequency() {
         switch (precision) {
             case "ms":

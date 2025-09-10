@@ -7,6 +7,7 @@ import com.fuzzy.common.tsaf.ConstraintValueGenerator;
 import com.fuzzy.common.tsaf.RangeConstraint;
 import com.fuzzy.common.tsaf.TimeSeriesConstraint;
 import com.fuzzy.common.tsaf.aggregation.DoubleArithmeticPrecisionConstant;
+import com.fuzzy.common.util.BigDecimalUtil;
 import com.fuzzy.common.visitor.ToStringVisitor;
 import com.fuzzy.common.visitor.UnaryOperation;
 import com.fuzzy.prometheus.ast.*;
@@ -29,8 +30,10 @@ public class PrometheusToConstraintVisitor extends ToStringVisitor<PrometheusExp
         this.databaseName = databaseName;
         this.tableName = tableName;
 
+        // TODO Prometheus 空值去除
 //        TimeSeriesConstraint nullValueTimestamps = new TimeSeriesConstraint(PrometheusConstantString.TIME_FIELD_NAME.getName(),
 //                new RangeConstraint());
+        TimeSeriesConstraint nullValueTimestamps = new TimeSeriesConstraint("time", new RangeConstraint());
         nullValueTimestamps.getRangeConstraints().clear();
         nullValuesSet.forEach(timestamp -> nullValueTimestamps.addEqualValue(new BigDecimal(timestamp)));
         this.nullValueTimestamps = nullValueTimestamps;
@@ -58,14 +61,14 @@ public class PrometheusToConstraintVisitor extends ToStringVisitor<PrometheusExp
 
     @Override
     public void visit(PrometheusColumnReference timeSeries) {
+        // TODO 默认转换为列约束 -> 约束条件为全局
         constraintStack.add(ConstraintValueGenerator.genTimeSeries(timeSeries.getColumn().getName()));
     }
 
     @Override
     public void visit(UnaryOperation<PrometheusExpression> unaryOperation) {
-//        if (unaryOperation instanceof PrometheusUnaryNotPrefixOperation)
-//            visit((PrometheusUnaryNotPrefixOperation) unaryOperation);
-
+        if (unaryOperation instanceof PrometheusUnaryNotPrefixOperation)
+            visit((PrometheusUnaryNotPrefixOperation) unaryOperation);
         if (unaryOperation instanceof PrometheusUnaryPrefixOperation)
             visit((PrometheusUnaryPrefixOperation) unaryOperation);
     }
@@ -79,6 +82,14 @@ public class PrometheusToConstraintVisitor extends ToStringVisitor<PrometheusExp
         ConstraintValue right = constraintStack.pop();
         ConstraintValue left = constraintStack.pop();
         ConstraintValue logicOp = constraintStack.pop();
+        // 单列 -> 永 true 的列约束
+        if (left instanceof ConstraintValue.TimeSeriesValue) {
+            left = ConstraintValueGenerator.genTrueConstraint();
+        }
+        if (right instanceof ConstraintValue.TimeSeriesValue) {
+            right = ConstraintValueGenerator.genTrueConstraint();
+        }
+
         // 仅支持列约束和列约束进行运算
         if (!(left instanceof ConstraintValue.TimeSeriesConstraintValue
                 && right instanceof ConstraintValue.TimeSeriesConstraintValue)) {
@@ -112,6 +123,9 @@ public class PrometheusToConstraintVisitor extends ToStringVisitor<PrometheusExp
 
     @Override
     public void visit(PrometheusBinaryComparisonOperation op) {
+        // TODO PromQL 获取的是最终计算结果，而不是原始样本值 => 跳过计算中间结果的表达式
+        // TODO 两个时序在相同时间戳上对值进行比较
+        // TODO 桶计算方式解决该难点
         visit(op.getLeft());
         visit(op.getRight());
         ConstraintValue right = constraintStack.pop();
@@ -150,7 +164,11 @@ public class PrometheusToConstraintVisitor extends ToStringVisitor<PrometheusExp
             timeSeriesValue.setInterceptZero();
             constantValue = rightTimeSeriesValue.getIntercept().getBigDecimalConstant();
         } else {
+            // TODO 在同一个时间戳上进行值比较
             // 不支持BOOL值比较
+            // TODO 列 and 时序约束 比较
+            // TODO (tsafdb_0_d5d4649c_f7f8_4b59_a917_23a04a8d0174 < 510) >= (tsafdb_0_d5d4649c_f7f8_4b59_a917_23a04a8d0174 < 512)
+            // TODO (tsafdb_0_d5d4649c_f7f8_4b59_a917_23a04a8d0174 < 510) > bool (1 < bool (1))
             log.warn("列约束参与比较运算, Prometheus不支持BOOL值比较");
             throw new IgnoreMeException();
         }
@@ -240,49 +258,49 @@ public class PrometheusToConstraintVisitor extends ToStringVisitor<PrometheusExp
             constraintStack.add(constraintValue);
     }
 
-//    @Override
-//    public void visit(PrometheusUnaryNotPrefixOperation op) {
-//        // Unary NOT Prefix Operation
-//        visit(op.getExpression());
-//        ConstraintValue constraintValue = constraintStack.pop();
-//        if (constraintValue.isTimeSeries()) {
-//            // 列表达式系数被减法清除 => NOT 常量 => TRUE
-//            ConstraintValue.TimeSeriesValue timeSeriesValue = (ConstraintValue.TimeSeriesValue) constraintValue;
-//            if (timeSeriesValue.getFactor().getBigDecimalConstant().compareTo(BigDecimal.ZERO) == 0) {
-//                if (op.getExpression().getExpectedValue().castAs(PrometheusCastOperation.CastType.BIGDECIMAL)
-//                        .getBigDecimalValue().compareTo(timeSeriesValue.getIntercept().getBigDecimalConstant()) == 0)
-//                    constraintStack.add(ConstraintValueGenerator.genTrueConstraint());
-//                else constraintStack.add(ConstraintValueGenerator.genFalseConstraint());
-//                return;
-//            }
-//
-//            // 列预期值, (NOT timeSeries) 即将其预期值取TRUE
-//            BigDecimal expectedValue = op.getExpression().getExpectedValue().castAs(
-//                    PrometheusCastOperation.CastType.BIGDECIMAL).getBigDecimalValue();
-//            // 消除列因子
-//            expectedValue = timeSeriesValue.eliminateFactor(expectedValue);
-//            BigDecimal lessValue = expectedValue;
-//            BigDecimal greaterValue = expectedValue;
-//            // 浮点运算存在精度损失
-//            if (BigDecimalUtil.isDouble(expectedValue)) {
-//                greaterValue = expectedValue.subtract(
-//                        BigDecimal.valueOf(Math.pow(10, -PrometheusConstant.PrometheusDoubleConstant.scale)));
-//                lessValue = expectedValue.add(
-//                        BigDecimal.valueOf(Math.pow(10, -PrometheusConstant.PrometheusDoubleConstant.scale)));
-//            }
-//            TimeSeriesConstraint curConstraint = new TimeSeriesConstraint(timeSeriesValue.getTimeSeriesName(), new RangeConstraint(
-//                    greaterValue, lessValue));
-//            constraintStack.add(ConstraintValueGenerator.genConstraint(timeSeriesValue, curConstraint));
-//        } else if (constraintValue.isConstant()) {
-//            // TRUE -> 常量覆盖区间所有范围
-//            constraintStack.add(ConstraintValueGenerator.genTrueConstraint());
-//        } else if (constraintValue.isTimeSeriesConstraint()) {
-//            // 列约束取反
-//            constraintStack.add(constraintValue.negate());
-//        } else {
-//            throw new AssertionError();
-//        }
-//    }
+    @Override
+    public void visit(PrometheusUnaryNotPrefixOperation op) {
+        // Unary NOT Prefix Operation
+        visit(op.getExpression());
+        ConstraintValue constraintValue = constraintStack.pop();
+        if (constraintValue.isTimeSeries()) {
+            // 列表达式系数被减法清除 => NOT 常量 => TRUE
+            ConstraintValue.TimeSeriesValue timeSeriesValue = (ConstraintValue.TimeSeriesValue) constraintValue;
+            if (timeSeriesValue.getFactor().getBigDecimalConstant().compareTo(BigDecimal.ZERO) == 0) {
+                if (op.getExpression().getExpectedValue().castAs(PrometheusSchema.CommonDataType.BIGDECIMAL)
+                        .getBigDecimalValue().compareTo(timeSeriesValue.getIntercept().getBigDecimalConstant()) == 0)
+                    constraintStack.add(ConstraintValueGenerator.genTrueConstraint());
+                else constraintStack.add(ConstraintValueGenerator.genFalseConstraint());
+                return;
+            }
+
+            // 列预期值, (NOT timeSeries) 即将其预期值取TRUE
+            BigDecimal expectedValue = op.getExpression().getExpectedValue().castAs(
+                    PrometheusSchema.CommonDataType.BIGDECIMAL).getBigDecimalValue();
+            // 消除列因子
+            expectedValue = timeSeriesValue.eliminateFactor(expectedValue);
+            BigDecimal lessValue = expectedValue;
+            BigDecimal greaterValue = expectedValue;
+            // 浮点运算存在精度损失
+            if (BigDecimalUtil.isDouble(expectedValue)) {
+                greaterValue = expectedValue.subtract(
+                        BigDecimal.valueOf(Math.pow(10, -PrometheusConstant.PrometheusDoubleConstant.scale)));
+                lessValue = expectedValue.add(
+                        BigDecimal.valueOf(Math.pow(10, -PrometheusConstant.PrometheusDoubleConstant.scale)));
+            }
+            TimeSeriesConstraint curConstraint = new TimeSeriesConstraint(timeSeriesValue.getTimeSeriesName(), new RangeConstraint(
+                    greaterValue, lessValue));
+            constraintStack.add(ConstraintValueGenerator.genConstraint(timeSeriesValue, curConstraint));
+        } else if (constraintValue.isConstant()) {
+            // TRUE -> 常量覆盖区间所有范围
+            constraintStack.add(ConstraintValueGenerator.genTrueConstraint());
+        } else if (constraintValue.isTimeSeriesConstraint()) {
+            // 列约束取反
+            constraintStack.add(constraintValue.negate());
+        } else {
+            throw new AssertionError();
+        }
+    }
 
     @Override
     public void visit(PrometheusBinaryArithmeticOperation op) {

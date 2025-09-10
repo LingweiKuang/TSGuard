@@ -50,8 +50,13 @@ public abstract class ProviderAdapter<G extends GlobalState<O, ? extends Abstrac
     @Override
     public Reproducer<G> generateAndTestDatabase(G globalState) throws Exception {
         try {
+            // 测试数据时间范围：[cur - 3400, cur], unit: s
+            // startTimestamp 需要随着测试的进行同步修正 -> remote write 仅支持插入 1h 内数据
+            long curTimestamp = System.currentTimeMillis() / 1000;
+            long startTimestamp = curTimestamp - 3300;
+            globalState.getOptions().setStartTimestampOfTSData(startTimestamp);
+
             generateDatabase(globalState);
-//            checkViewsAreValid(globalState);
             globalState.getManager().incrementCreateDatabase();
 
             TestOracle<G> oracle = getTestOracle(globalState);

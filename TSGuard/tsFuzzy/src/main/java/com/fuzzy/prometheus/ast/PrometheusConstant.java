@@ -10,6 +10,11 @@ import java.math.BigDecimal;
 @Slf4j
 public abstract class PrometheusConstant implements PrometheusExpression {
 
+    @Override
+    public boolean isScalarExpression() {
+        return true;
+    }
+
     public boolean isInt() {
         return false;
     }

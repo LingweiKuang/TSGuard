@@ -145,16 +145,19 @@ public class TDengineTSAFOracle
     @Override
     protected Map<Long, List<BigDecimal>> getExpectedValues(TDengineExpression expression) {
         // 联立方程式求解
+        TimeCost timeCost = new TimeCost().begin();
         String databaseName = globalState.getDatabaseName();
         String tableName = table.getName();
         List<String> fetchColumnNames = columns.stream().map(AbstractTableColumn::getName).collect(Collectors.toList());
         TimeSeriesConstraint timeSeriesConstraint = TDengineVisitor.asConstraint(databaseName, tableName,
                 expression, TableToNullValuesManager.getNullValues(databaseName, tableName));
         PredicationEquation predicationEquation = new PredicationEquation(timeSeriesConstraint, "equationName");
-        return predicationEquation.genExpectedResultSet(databaseName, tableName, fetchColumnNames,
+        Map<Long, List<BigDecimal>> resultSet = predicationEquation.genExpectedResultSet(databaseName, tableName, fetchColumnNames,
                 globalState.getOptions().getStartTimestampOfTSData(),
                 TDengineInsertGenerator.getLastTimestamp(databaseName, tableName),
                 TDengineConstant.createFloatArithmeticTolerance());
+        TDengineQuerySynthesisFeedbackManager.incrementCalculateTimeOverhead(timeCost.end().getCost());
+        return resultSet;
     }
 
     @Override

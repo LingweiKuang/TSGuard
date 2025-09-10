@@ -130,6 +130,11 @@ public class PrometheusBinaryArithmeticOperation implements PrometheusExpression
         return op.apply(leftExpected, rightExpected);
     }
 
+    @Override
+    public boolean isScalarExpression() {
+        return left.isScalarExpression() && right.isScalarExpression();
+    }
+
     public PrometheusExpression getLeft() {
         return left;
     }

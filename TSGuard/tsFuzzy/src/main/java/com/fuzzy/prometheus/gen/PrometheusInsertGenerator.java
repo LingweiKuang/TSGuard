@@ -58,7 +58,7 @@ public class PrometheusInsertGenerator {
 
         // 产出 Prometheus 数据
         if (globalState.usesTSAF()) {
-            insertParam.setCollectorList(generateInsertForTSAF());
+            insertParam.setCollectorMap(generateInsertForTSAF());
         } else {
 
         }

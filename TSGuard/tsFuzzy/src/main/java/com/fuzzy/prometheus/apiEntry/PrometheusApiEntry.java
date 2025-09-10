@@ -6,16 +6,20 @@ import com.benchmark.dto.DBValParam;
 import com.benchmark.entity.AggCountResult;
 import com.benchmark.entity.DBVal;
 import com.benchmark.entity.PerformanceEntity;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.HttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 public class PrometheusApiEntry implements ApiEntry {
     private String host;
     private int port;
@@ -54,6 +58,11 @@ public class PrometheusApiEntry implements ApiEntry {
     }
 
     public String executeGetRequest(URI url) {
+        try {
+            log.info("Prometheus 执行查询, url:{}", URLDecoder.decode(url.toString(), StandardCharsets.UTF_8.toString()));
+        } catch (Exception e) {
+            log.error("解析 URL 字符串失败, url: {} e:", url, e);
+        }
         return this.template.getForObject(url, String.class);
     }
 

@@ -4,15 +4,13 @@ import com.fuzzy.common.constant.GlobalConstant;
 import com.fuzzy.common.visitor.ToStringVisitor;
 import com.fuzzy.common.visitor.UnaryOperation;
 import com.fuzzy.prometheus.ast.*;
-import com.jdcloud.sdk.utils.StringUtils;
-import org.springframework.util.ObjectUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.List;
 
 public class PrometheusToStringVisitor extends ToStringVisitor<PrometheusExpression> implements PrometheusVisitor {
 
+    // 抽象语法树转 PromQL 表达式
     int ref;
     // 是否抽象语法节点
     boolean isAbstractExpression;
@@ -32,8 +30,10 @@ public class PrometheusToStringVisitor extends ToStringVisitor<PrometheusExpress
 
     @Override
     public void visit(PrometheusTableReference ref) {
-        if (!isAbstractExpression) sb.append(ref.getTable().getName());
-        else sb.append(GlobalConstant.TABLE_NAME);
+        if (!isAbstractExpression) {
+            // TODO
+            sb.append(ref.getTable().getName());
+        } else sb.append(GlobalConstant.TABLE_NAME);
     }
 
     @Override
@@ -50,10 +50,14 @@ public class PrometheusToStringVisitor extends ToStringVisitor<PrometheusExpress
 
     @Override
     public void visit(PrometheusColumnReference column) {
+        String databaseName = column.getColumn().getTable().getDatabaseName();
+        String tableName = column.getColumn().getTable().getName();
         String columnName = column.getColumn().getName();
+        String timeSeriesName = String.format("%s{table=\"%s\", timeSeries=\"%s\"}", databaseName, tableName, columnName);
+        // TODO
 //        if (isAbstractExpression && !columnName.equalsIgnoreCase(PrometheusConstantString.TIME_FIELD_NAME.getName()))
 //            columnName = GlobalConstant.COLUMN_NAME;
-        sb.append(columnName);
+        sb.append(timeSeriesName);
     }
 
     public void visitDoubleValueLeft(PrometheusConstant constant) {
@@ -95,94 +99,9 @@ public class PrometheusToStringVisitor extends ToStringVisitor<PrometheusExpress
 
     @Override
     public void visit(PrometheusSelect s) {
-        sb.append("SELECT ");
-//        if (s.getHint() != null) {
-//            sb.append("/*+ ");
-//            visit(s.getHint());
-//            sb.append("*/ ");
-//        }
-        switch (s.getFromOptions()) {
-            case DISTINCT:
-                sb.append("DISTINCT ");
-                break;
-            case ALL:
-//                sb.append(Randomly.fromOptions("ALL ", ""));
-                break;
-            default:
-                throw new AssertionError();
-        }
-
-        // 常规查询
-        if (s.getFetchColumns() == null) {
-            sb.append("*");
-        } else {
-            for (int i = 0; i < s.getFetchColumns().size(); i++) {
-                if (i != 0) sb.append(", ");
-                // not support cross join
-                visit(s.getFetchColumns().get(i));
-//                if (i != s.getFetchColumns().size() - 1)
-//                    sb.append(" AS ").append(PrometheusConstantString.REF).append(i);
-            }
-        }
-
-        sb.append(" FROM ");
-        for (int i = 0; i < s.getFromList().size(); i++) {
-            if (i != 0) {
-                sb.append(", ");
-            }
-            visit(s.getFromList().get(i));
-        }
         if (s.getWhereClause() != null) {
             PrometheusExpression whereClause = s.getWhereClause();
-            sb.append(" WHERE ");
             visit(whereClause);
-        }
-        if (s.getGroupByExpressions() != null && s.getGroupByExpressions().size() > 0) {
-            sb.append(" ");
-            sb.append("GROUP BY ");
-            List<PrometheusExpression> groupBys = s.getGroupByExpressions();
-            for (int i = 0; i < groupBys.size(); i++) {
-                if (i != 0) {
-                    sb.append(", ");
-                }
-                visit(groupBys.get(i));
-            }
-        }
-
-        if (!ObjectUtils.isEmpty(s.getIntervalValues())) {
-            sb.append(" INTERVAL (");
-            for (int i = 0; i < s.getIntervalValues().size(); i++) {
-                sb.append(s.getIntervalValues().get(i));
-                if (i != s.getIntervalValues().size() - 1) sb.append(", ");
-            }
-            sb.append(")");
-        }
-
-        if (!StringUtils.isBlank(s.getSlidingValue())) {
-            sb.append(" SLIDING (")
-                    .append(s.getSlidingValue())
-                    .append(")");
-        }
-
-
-        if (!ObjectUtils.isEmpty(s.getOrderByExpressions())) {
-            sb.append(" ORDER BY ");
-            List<PrometheusExpression> orderBys = s.getOrderByExpressions();
-            for (int i = 0; i < orderBys.size(); i++) {
-                if (i != 0) {
-                    sb.append(", ");
-                }
-                visit(s.getOrderByExpressions().get(i));
-            }
-        }
-        if (s.getLimitClause() != null) {
-            sb.append(" LIMIT ");
-            visit(s.getLimitClause());
-        }
-
-        if (s.getOffsetClause() != null) {
-            sb.append(" OFFSET ");
-            visit(s.getOffsetClause());
         }
     }
 
@@ -222,49 +141,48 @@ public class PrometheusToStringVisitor extends ToStringVisitor<PrometheusExpress
         super.visit((UnaryOperation<PrometheusExpression>) op);
     }
 
-//    @Override
-//    public void visit(PrometheusUnaryNotPrefixOperation unaryOperation) {
-//        // Unary NOT Prefix Operation
-//        if (!unaryOperation.omitBracketsWhenPrinting()) sb.append('(');
-//        PrometheusUnaryNotPrefixOperation.PrometheusUnaryNotPrefixOperator op =
-//                ((PrometheusUnaryNotPrefixOperation) unaryOperation).getOp();
-//        // NOT DOUBLE
-//        if (op.equals(PrometheusUnaryNotPrefixOperation.PrometheusUnaryNotPrefixOperator.NOT_DOUBLE)) {
-//            visitDoubleValueLeft(unaryOperation.getExpression().getExpectedValue());
-//            if (!unaryOperation.omitBracketsWhenPrinting()) sb.append('(');
-//            visit(unaryOperation.getExpression());
-//            if (!unaryOperation.omitBracketsWhenPrinting()) sb.append(')');
-//            sb.append(" AND ");
-//            if (!unaryOperation.omitBracketsWhenPrinting()) sb.append('(');
-//            visit(unaryOperation.getExpression());
-//            if (!unaryOperation.omitBracketsWhenPrinting()) sb.append(')');
-//            visitDoubleValueRight(unaryOperation.getExpression().getExpectedValue());
-//            if (!unaryOperation.omitBracketsWhenPrinting()) sb.append(')');
-//            return;
-//        }
-//
-//        // NOT BOOLEAN
-//        if (op.equals(PrometheusUnaryNotPrefixOperation.PrometheusUnaryNotPrefixOperator.NOT))
-//            sb.append(unaryOperation.getOperatorRepresentation());
-//        else {
-//            // NOT INT
-//            visit(unaryOperation.getExpression().getExpectedValue());
-//            // 子节点为常量、列、强转运算时, NOT符号改为 =
-//            if (unaryOperation.getExpression() instanceof PrometheusConstant
-//                    || unaryOperation.getExpression() instanceof PrometheusColumnReference
-//                    || unaryOperation.getExpression() instanceof PrometheusCastOperation
-//                    || unaryOperation.getExpression() instanceof PrometheusUnaryPrefixOperation
-//                    || unaryOperation.getExpression() instanceof PrometheusBinaryArithmeticOperation
-//                    || unaryOperation.getExpression() instanceof PrometheusComputableFunction
-//                    || unaryOperation.getExpression() instanceof PrometheusBinaryOperation)
-//                sb.append(" = ");
-//        }
-//
-//        if (!unaryOperation.omitBracketsWhenPrinting()) sb.append('(');
-//        visit(unaryOperation.getExpression());
-//        if (!unaryOperation.omitBracketsWhenPrinting()) sb.append(')');
-//        if (!unaryOperation.omitBracketsWhenPrinting()) sb.append(')');
-//    }
+    @Override
+    public void visit(PrometheusUnaryNotPrefixOperation unaryOperation) {
+        // Unary NOT Prefix Operation
+        if (!unaryOperation.omitBracketsWhenPrinting()) sb.append('(');
+        PrometheusUnaryNotPrefixOperation.PrometheusUnaryNotPrefixOperator op =
+                ((PrometheusUnaryNotPrefixOperation) unaryOperation).getOp();
+        // NOT DOUBLE
+        if (op.equals(PrometheusUnaryNotPrefixOperation.PrometheusUnaryNotPrefixOperator.NOT_DOUBLE)) {
+            visitDoubleValueLeft(unaryOperation.getExpression().getExpectedValue());
+            if (!unaryOperation.omitBracketsWhenPrinting()) sb.append('(');
+            visit(unaryOperation.getExpression());
+            if (!unaryOperation.omitBracketsWhenPrinting()) sb.append(')');
+            sb.append(" AND ");
+            if (!unaryOperation.omitBracketsWhenPrinting()) sb.append('(');
+            visit(unaryOperation.getExpression());
+            if (!unaryOperation.omitBracketsWhenPrinting()) sb.append(')');
+            visitDoubleValueRight(unaryOperation.getExpression().getExpectedValue());
+            if (!unaryOperation.omitBracketsWhenPrinting()) sb.append(')');
+            return;
+        }
+
+        // NOT INT
+        visit(unaryOperation.getExpression().getExpectedValue());
+        // 子节点为常量、列、强转运算时, NOT符号改为 =
+        if (unaryOperation.getExpression() instanceof PrometheusConstant
+                || unaryOperation.getExpression() instanceof PrometheusColumnReference
+                || unaryOperation.getExpression() instanceof PrometheusBinaryLogicalOperation
+                || unaryOperation.getExpression() instanceof PrometheusUnaryPrefixOperation
+                || unaryOperation.getExpression() instanceof PrometheusBinaryArithmeticOperation
+//                || unaryOperation.getExpression() instanceof PrometheusBinaryOperation
+//                || unaryOperation.getExpression() instanceof PrometheusComputableFunction
+        )
+            sb.append(" == ");
+
+        if (unaryOperation.getExpression() instanceof PrometheusConstant) {
+            sb.append("bool ");
+        }
+        if (!unaryOperation.omitBracketsWhenPrinting()) sb.append('(');
+        visit(unaryOperation.getExpression());
+        if (!unaryOperation.omitBracketsWhenPrinting()) sb.append(')');
+        if (!unaryOperation.omitBracketsWhenPrinting()) sb.append(')');
+    }
 
     @Override
     public void visit(PrometheusBinaryArithmeticOperation op) {
@@ -343,10 +261,9 @@ public class PrometheusToStringVisitor extends ToStringVisitor<PrometheusExpress
 
     @Override
     public void visit(UnaryOperation<PrometheusExpression> unaryOperation) {
-        /*if (unaryOperation instanceof PrometheusUnaryNotPrefixOperation)
+        if (unaryOperation instanceof PrometheusUnaryNotPrefixOperation)
             visit((PrometheusUnaryNotPrefixOperation) unaryOperation);
-        else*/
-        if (unaryOperation instanceof PrometheusUnaryPrefixOperation)
+        else if (unaryOperation instanceof PrometheusUnaryPrefixOperation)
             visit((PrometheusUnaryPrefixOperation) unaryOperation);
     }
 

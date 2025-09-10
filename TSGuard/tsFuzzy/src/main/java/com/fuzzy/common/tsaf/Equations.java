@@ -32,10 +32,13 @@ public class Equations {
         EquationType type;
         switch (tsafDataType) {
             case INT:
+                // TODO
                 k = Randomly.getBoolean() ? BigDecimal.valueOf(randomly.getLong(-50, 0)) :
                         BigDecimal.valueOf(randomly.getLong(1, 50));
                 c = BigDecimal.valueOf(randomly.getLong(-100, 100));
                 type = Randomly.fromOptions(EquationType.linearEquation);
+                k = BigDecimal.ONE;
+                c = BigDecimal.ZERO;
                 break;
             case UINT:
                 k = BigDecimal.valueOf(randomly.getLong(1, 50));
@@ -331,8 +334,8 @@ public class Equations {
     }
 
     public BigDecimal genValueByTimestamp(SamplingFrequency samplingFrequency, long timestamp) {
-        return this.equationType.apply(samplingFrequency, timestamp, args).setScale(DoubleArithmeticPrecisionConstant.scale,
-                RoundingMode.HALF_UP);
+        return this.equationType.apply(samplingFrequency, timestamp, args)
+                .setScale(DoubleArithmeticPrecisionConstant.scale, RoundingMode.HALF_UP);
     }
 
     public TimeSeriesConstraint transformTimeSeriesConstraint(TimeSeriesConstraint timeSeriesConstraint) {

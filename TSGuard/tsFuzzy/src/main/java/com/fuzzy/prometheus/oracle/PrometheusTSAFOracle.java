@@ -9,7 +9,10 @@ import com.fuzzy.common.oracle.TimeSeriesAlgebraFrameworkBase;
 import com.fuzzy.common.query.Query;
 import com.fuzzy.common.query.QueryExecutionStatistical;
 import com.fuzzy.common.query.SQLQueryAdapter;
+import com.fuzzy.common.schema.AbstractTableColumn;
+import com.fuzzy.common.tsaf.PredicationEquation;
 import com.fuzzy.common.tsaf.QueryType;
+import com.fuzzy.common.tsaf.TableToNullValuesManager;
 import com.fuzzy.common.tsaf.TimeSeriesConstraint;
 import com.fuzzy.prometheus.PrometheusErrors;
 import com.fuzzy.prometheus.PrometheusGlobalState;
@@ -17,12 +20,17 @@ import com.fuzzy.prometheus.PrometheusSchema;
 import com.fuzzy.prometheus.PrometheusSchema.PrometheusColumn;
 import com.fuzzy.prometheus.PrometheusSchema.PrometheusTable;
 import com.fuzzy.prometheus.PrometheusVisitor;
+import com.fuzzy.prometheus.apiEntry.PrometheusQueryParam;
+import com.fuzzy.prometheus.apiEntry.PrometheusRequestType;
 import com.fuzzy.prometheus.ast.*;
 import com.fuzzy.prometheus.feedback.PrometheusQuerySynthesisFeedbackManager;
 import com.fuzzy.prometheus.gen.PrometheusExpressionGenerator;
+import com.fuzzy.prometheus.gen.PrometheusInsertGenerator;
+import com.fuzzy.prometheus.resultSet.PrometheusResultSet;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -49,12 +57,6 @@ public class PrometheusTSAFOracle
         List<PrometheusSchema.PrometheusTable> tables = randomFromTables.getTables();
         selectStatement = new PrometheusSelect();
         table = Randomly.fromList(tables);
-        selectStatement.setSelectType(Randomly.fromOptions(PrometheusSelect.SelectType.values()));
-        // 注: TSAF和大多数时序数据库均不支持将time字段和其他字段进行比较、算术二元运算
-//        columns = randomFromTables.getColumns().stream()
-//                .filter(c -> !c.getName().equalsIgnoreCase(PrometheusConstantString.TIME_FIELD_NAME.getName())
-//                        && !c.getName().equalsIgnoreCase(PrometheusConstantString.DEVICE_ID_COLUMN_NAME.getName()))
-//                .collect(Collectors.toList());
         columns = randomFromTables.getColumns();
         selectStatement.setFromList(tables.stream().map(PrometheusTableReference::new).collect(Collectors.toList()));
 
@@ -78,14 +80,6 @@ public class PrometheusTSAFOracle
 //        }
 
         // fetchColumns
-//        fetchColumns = columns.stream().map(c -> {
-//            String columnName = c.getName();
-//            if (queryType.isTimeWindowQuery())
-//                columnName = String.format("%s(%s)", selectStatement.getAggregationType(), columnName);
-//            else if (queryType.isTimeSeriesFunction())
-//                columnName = selectStatement.getTimeSeriesFunction().combinedArgs(columnName);
-//            return new PrometheusColumnReference(new PrometheusSchema.PrometheusColumn(columnName, c.isTag(), c.getType()), null);
-//        }).collect(Collectors.toList());
         fetchColumns = columns.stream().map(c -> new PrometheusColumnReference(c, null))
                 .collect(Collectors.toList());
 //        String timeColumnName = queryType.isTimeWindowQuery() ? PrometheusConstantString.W_START_TIME_COLUMN_NAME.getName() :
@@ -94,16 +88,10 @@ public class PrometheusTSAFOracle
 //                PrometheusSchema.PrometheusDataType.TIMESTAMP), null));
         selectStatement.setFetchColumns(fetchColumns);
 
-        // ORDER BY
-        // Prometheus distinct 不支持和order by time结合
-//        if (!(selectStatement.getQueryType().isTimeSeriesFunction()
-//                && selectStatement.getFromOptions() == PrometheusSelect.SelectType.DISTINCT)) {
-//            List<PrometheusExpression> orderBy = new PrometheusExpressionGenerator(globalState).setColumns(
-//                    Collections.singletonList(new PrometheusSchema.PrometheusColumn(timeColumnName, false,
-//                            PrometheusSchema.PrometheusDataType.TIMESTAMP))).generateOrderBys();
-//            selectStatement.setOrderByExpressions(orderBy);
-//        }
-        return new SQLQueryAdapter(PrometheusVisitor.asString(selectStatement), errors);
+        // TODO 时间范围全选
+        return new SQLQueryAdapter(new PrometheusQueryParam(PrometheusVisitor.asString(selectStatement),
+                System.currentTimeMillis() - 3600000L, System.currentTimeMillis())
+                .genPrometheusRequestParam(PrometheusRequestType.RANGE_QUERY), errors);
     }
 
     @Override
@@ -138,31 +126,29 @@ public class PrometheusTSAFOracle
     @Override
     protected Map<Long, List<BigDecimal>> getExpectedValues(PrometheusExpression expression) {
         // 联立方程式求解
-//        String databaseName = globalState.getDatabaseName();
-//        String tableName = table.getName();
-//        List<String> fetchColumnNames = columns.stream().map(AbstractTableColumn::getName).collect(Collectors.toList());
-//        TimeSeriesConstraint timeSeriesConstraint = PrometheusVisitor.asConstraint(databaseName, tableName,
-//                expression, TableToNullValuesManager.getNullValues(databaseName, tableName));
-//        PredicationEquation predicationEquation = new PredicationEquation(timeSeriesConstraint, "equationName");
-//        return predicationEquation.genExpectedResultSet(databaseName, tableName, fetchColumnNames,
-//                globalState.getOptions().getStartTimestampOfTSData(),
-//                PrometheusInsertGenerator.getLastTimestamp(databaseName, tableName),
-//                PrometheusConstant.createFloatArithmeticTolerance());
-        return null;
+        String databaseName = globalState.getDatabaseName();
+        String tableName = table.getName();
+        List<String> fetchColumnNames = columns.stream().map(AbstractTableColumn::getName).collect(Collectors.toList());
+        TimeSeriesConstraint timeSeriesConstraint = PrometheusVisitor.asConstraint(databaseName, tableName,
+                expression, TableToNullValuesManager.getNullValues(databaseName, tableName));
+        PredicationEquation predicationEquation = new PredicationEquation(timeSeriesConstraint, "equationName");
+        return predicationEquation.genExpectedResultSet(databaseName, tableName, fetchColumnNames,
+                globalState.getOptions().getStartTimestampOfTSData(),
+                PrometheusInsertGenerator.getLastTimestamp(databaseName, tableName),
+                PrometheusConstant.createFloatArithmeticTolerance());
     }
 
     @Override
     protected boolean verifyResultSet(Map<Long, List<BigDecimal>> expectedResultSet, DBValResultSet result) {
-//        try {
-//            if (selectStatement.getQueryType().isTimeSeriesFunction()
-//                    || selectStatement.getQueryType().isTimeWindowQuery())
-//                return verifyTimeWindowQuery(expectedResultSet, result);
-//            else return verifyGeneralQuery(expectedResultSet, result);
-//        } catch (Exception e) {
-//            log.error("验证查询结果集和预期结果集等价性异常, e:", e);
-//            return false;
-//        }
-        return true;
+        try {
+            if (selectStatement.getQueryType().isTimeSeriesFunction()
+                    || selectStatement.getQueryType().isTimeWindowQuery())
+                return verifyTimeWindowQuery(expectedResultSet, result);
+            else return verifyGeneralQuery(expectedResultSet, result);
+        } catch (Exception e) {
+            log.error("验证查询结果集和预期结果集等价性异常, e:", e);
+            return false;
+        }
     }
 
     private boolean verifyTimeWindowQuery(Map<Long, List<BigDecimal>> expectedResultSet, DBValResultSet result)
@@ -200,64 +186,63 @@ public class PrometheusTSAFOracle
         return true;
     }
 
+    /**
+     * Prometheus 按照 step 取数，对于不存在的点自动往前取最近点数据。
+     * 因此，比对逻辑：真实结果集一定包含预期结果集所有数据。
+     *
+     * @param expectedResultSet
+     * @param result
+     * @return
+     * @throws Exception
+     */
     private boolean verifyGeneralQuery(Map<Long, List<BigDecimal>> expectedResultSet, DBValResultSet result)
             throws Exception {
-        // 针对每行进行验证
-        while (result.hasNext()) {
-            if (verifyRowResult(expectedResultSet, result) == VerifyResultState.FAIL) return false;
-        }
-
+        // 验证包含关系
+        if (verifyRowResult(expectedResultSet, result) == VerifyResultState.FAIL) return false;
         return true;
     }
 
     private VerifyResultState verifyRowResult(Map<Long, List<BigDecimal>> expectedResultSet, DBValResultSet result)
             throws Exception {
-//        getExpectedValues(whereClause);
-//        PrometheusResultSet PrometheusResultSet = (PrometheusResultSet) result;
-//        PrometheusColumn timeColumn = new PrometheusColumn(PrometheusValueStateConstant.TIME_FIELD.getValue(),
-//                false, PrometheusDataType.TIMESTAMP);
-//        int timeIndex = PrometheusResultSet.findColumn(timeColumn.getName());
-//
-//        for (int i = 0; i < fetchColumns.size(); i++) {
-//            // 评估整条时间序列
-//            PrometheusColumn dataColumn = ((PrometheusColumnReference) fetchColumns.get(i)).getColumn();
-//
-//            // 聚合函数列名取聚合函数名
-//            String columnName = PrometheusValueStateConstant.REF.getValue() + i;
-//            int columnIndex = PrometheusResultSet.findColumn(columnName);
-//            PrometheusSeries currentValue = PrometheusResultSet.getCurrentValue();
-//            int nullValueCount = 0;
-//            for (List<String> stringValues : currentValue.getValues()) {
-//                PrometheusConstant dataConstant = getConstantFromResultSet(stringValues, dataColumn.getType(), columnIndex);
-//                if (dataConstant.isNull()) {
-//                    nullValueCount++;
-//                    continue;
-//                }
-//                long timestamp = getConstantFromResultSet(stringValues, timeColumn.getType(), timeIndex)
-//                        .getBigDecimalValue().longValue();
-//
-//                if (!expectedResultSet.containsKey(timestamp)) {
-//                    log.error("预期结果集中不包含实际结果集时间戳, timestamp:{}", timestamp);
-//                    return VerifyResultState.FAIL;
-//                }
-//                PrometheusConstant isEquals = dataConstant.isEquals(
-//                        new PrometheusConstant.PrometheusBigDecimalConstant(expectedResultSet.get(timestamp).get(i)));
-//                if (isEquals.isNull()) throw new AssertionError();
-//                else if (!isEquals.asBooleanNotNull()) {
-//                    log.error("预期结果集和实际结果集具体时间戳下数据异常, timestamp:{}, expectedValue:{}, actualValue:{}",
-//                            timestamp, expectedResultSet.get(timestamp), dataConstant.getBigDecimalValue());
-//                    return VerifyResultState.FAIL;
-//                }
-//            }
-//            // 数目
-//            if (expectedResultSet.size() != currentValue.getValues().size() - nullValueCount) {
-//                log.error("预期结果集和实际结果集数目不一致, expectedResultSetSize:{} rowCount:{} nullValueCount:{}",
-//                        expectedResultSet.size(), currentValue.getValues().size(), nullValueCount);
-//                return VerifyResultState.FAIL;
-//            }
-//        }
-//        return VerifyResultState.SUCCESS;
-        return null;
+        PrometheusResultSet prometheusResultSet = (PrometheusResultSet) result;
+        Map<Long, List<BigDecimal>> actualResultSet = prometheusResultSet.genTimestampToValuesMap();
+        for (Long expectedTimestamp : expectedResultSet.keySet()) {
+            // 统一预期结果集和真实结果集时间戳精度
+            List<BigDecimal> expectedValues = expectedResultSet.get(expectedTimestamp);
+            Long timestamp = expectedTimestamp / 1000;
+            if (!actualResultSet.containsKey(timestamp)) {
+                // 1. 真实结果集不包含预期时间戳
+                return VerifyResultState.FAIL;
+            } else if (expectedValues.size() != actualResultSet.get(timestamp).size()) {
+                // 2. 真是结果集在该点值数目与预期结果集不一致
+                return VerifyResultState.FAIL;
+            } else {
+                return compareSortedValues(expectedValues, actualResultSet.get(timestamp));
+            }
+        }
+        return VerifyResultState.SUCCESS;
+    }
+
+    private VerifyResultState compareSortedValues(List<BigDecimal> expectedValues, List<BigDecimal> actualValues) {
+        expectedValues.sort(new Comparator<BigDecimal>() {
+            @Override
+            public int compare(BigDecimal o1, BigDecimal o2) {
+                return o1.compareTo(o2);
+            }
+        });
+        actualValues.sort(new Comparator<BigDecimal>() {
+            @Override
+            public int compare(BigDecimal o1, BigDecimal o2) {
+                return o1.compareTo(o2);
+            }
+        });
+        // 比较排序后的结果值
+        for (int i = 0; i < expectedValues.size(); i++) {
+            if (expectedValues.get(i).compareTo(actualValues.get(i)) != 0) {
+                return VerifyResultState.FAIL;
+            }
+        }
+        return VerifyResultState.SUCCESS;
     }
 
     private enum VerifyResultState {
@@ -306,7 +291,6 @@ public class PrometheusTSAFOracle
 //    }
 //
     private PrometheusExpression generateExpression(List<PrometheusSchema.PrometheusColumn> columns) {
-        // TODO 生成 INT 或者 DOUBLE 值进行表达式测试
         PrometheusExpression result = null;
         boolean reGenerateExpr;
         int regenerateCounter = 0;
@@ -316,27 +300,35 @@ public class PrometheusTSAFOracle
             try {
                 PrometheusExpression predicateExpression =
                         new PrometheusExpressionGenerator(globalState).setColumns(columns).generateExpression();
-                // TODO
+                // TODO 表达式生成并转换
                 // 将表达式纠正为BOOLEAN类型
                 PrometheusExpression rectifiedPredicateExpression = predicateExpression;
 
                 // 单列谓词 -> 重新生成
-//                if (!predicateExpression.getExpectedValue().isBoolean()) {
-//                    rectifiedPredicateExpression =
-//                            PrometheusUnaryNotPrefixOperation.getNotUnaryPrefixOperation(predicateExpression);
-//                }
+                if (!predicateExpression.getExpectedValue().isBoolean()) {
+                    rectifiedPredicateExpression =
+                            PrometheusUnaryNotPrefixOperation.getNotUnaryPrefixOperation(predicateExpression);
+                }
 
                 // add time column
 //                PrometheusExpression timeExpression = new PrometheusTimeExpressionGenerator(globalState).setColumns(
 //                        Collections.singletonList(new PrometheusSchema.PrometheusColumn(PrometheusConstantString.TIME_FIELD_NAME.getName(),
 //                                false, PrometheusSchema.PrometheusDataType.TIMESTAMP))).generateExpression();
-                PrometheusExpression timeExpression = null;
+//                PrometheusExpression timeExpression = null;
 
-                result = new PrometheusBinaryLogicalOperation(rectifiedPredicateExpression, timeExpression,
-                        PrometheusBinaryLogicalOperation.PrometheusBinaryLogicalOperator.AND);
-//                log.info("Expression: {}", PrometheusVisitor.asString(result));
+//                result = new PrometheusBinaryLogicalOperation(rectifiedPredicateExpression, timeExpression,
+//                        PrometheusBinaryLogicalOperation.PrometheusBinaryLogicalOperator.AND);
+                // TODO 暂时忽略时间维度
+                result = rectifiedPredicateExpression;
 
+                // TODO 结果解析
                 predicateSequence = PrometheusVisitor.asString(rectifiedPredicateExpression, true);
+                if (result.isScalarExpression()) {
+                    // 仅含标量的表达式不进行度量
+                    throw new ReGenerateExpressionException(String.format("该语法节点序列仅含标量, 需重新生成:%s",
+                            predicateSequence));
+                }
+
                 if (globalState.getOptions().useSyntaxSequence()
                         && PrometheusQuerySynthesisFeedbackManager.isRegenerateSequence(predicateSequence)) {
                     regenerateCounter++;
@@ -354,6 +346,7 @@ public class PrometheusTSAFOracle
             }
         } while (reGenerateExpr);
 
+        log.info("Expression: {}", PrometheusVisitor.asString(result));
         timePredicate = result;
         this.predicateSequence = predicateSequence;
         return result;
@@ -374,7 +367,7 @@ public class PrometheusTSAFOracle
 ////        intervals.add(String.format(String.format("%d%s", offsetSize, timeUnit)));
 //        selectStatement.setIntervalValues(intervals);
 //    }
-//
+
 //    private List<PrometheusExpression> generateGroupByClause(List<PrometheusColumn> columns, PrometheusRowValue rw) {
 //        if (Randomly.getBoolean()) {
 //            return columns.stream().map(c -> PrometheusColumnReference.create(c, rw.getValues().get(c)))

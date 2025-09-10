@@ -22,8 +22,9 @@ public class TestPrometheus {
     @Test
     public void testTSAF() {
         // 测试数据时间范围：[cur - 3400, cur], unit: s
+        // TODO startTimestamp 需要随着测试的进行同步修正
         long curTimestamp = System.currentTimeMillis() / 1000;
-        long startTimestamp = curTimestamp - 3400;
+        long startTimestamp = curTimestamp - 3300;
 
         assertEquals(0,
                 Main.executeMain(new String[]{"--random-seed", "-1", "--timeout-seconds", TestConfig.SECONDS,
@@ -38,4 +39,7 @@ public class TestPrometheus {
                         "tsafdb", "--max-generated-databases", "1",
                         "--num-queries", TestConfig.NUM_QUERIES, GlobalConstant.PROMETHEUS_DATABASE_NAME, "--oracle", "TSAF"}));
     }
+
+    // curl -X POST -g 'http://127.0.0.1:9090/api/v1/admin/tsdb/delete_series?match[]=tsafdbconnectiontest'
+    // curl -X POST -g 'http://127.0.0.1:9090/api/v1/admin/tsdb/delete_series?match[]={"__name__":"tsafdb_0_2cedd0e7_ca5f_44d6_a128_6f37f3fc7854"}'
 }

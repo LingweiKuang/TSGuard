@@ -19,11 +19,7 @@ public class PrometheusQuerySynthesisFeedbackManager {
     private static final Set<String> reportedBugSequence = new HashSet<>();
 
     static {
-        reportedBugSequence.add("(constant) - (time)");
-        reportedBugSequence.add("(((time) IN (constant)) AND ((time) BETWEEN (constant) AND (constant)))");
-        reportedBugSequence.add("(((time) IN (constant, constant)) AND ((time) BETWEEN (constant) AND (constant)))");
-        reportedBugSequence.add("(((time) IN (constant, constant, constant)) AND ((time) BETWEEN (constant) AND (constant)))");
-        reportedBugSequence.add("((constant <= ((column) / (constant)) AND ((column) / (constant)) <= constant))");
+
     }
 
     public static void addSequenceRegenerateProbability(String sequence) {

@@ -125,8 +125,8 @@ public class PrometheusPushClient {
         collectorAttribute0.getTimestamps().add(1748136858175L);
 
         PrometheusInsertParam insertParam = new PrometheusInsertParam();
-        insertParam.getCollectorList().put(metricName, collectorAttribute);
-        insertParam.getCollectorList().put(metricName0, collectorAttribute0);
+        insertParam.getCollectorMap().put(metricName, collectorAttribute);
+        insertParam.getCollectorMap().put(metricName0, collectorAttribute0);
         byte[] compressed = insertParam.snappyCompressedRequest(metricName);
         byte[] compressed2 = insertParam.snappyCompressedRequest(metricName0);
 

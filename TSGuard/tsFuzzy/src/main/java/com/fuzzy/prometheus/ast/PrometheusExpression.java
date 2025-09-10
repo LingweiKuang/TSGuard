@@ -9,4 +9,13 @@ public interface PrometheusExpression {
     default void checkSyntax() {
     }
 
+    /**
+     * 判断表达式是否为标量表达式
+     *
+     * @return
+     */
+    default boolean isScalarExpression() {
+        return false;
+    }
+
 }

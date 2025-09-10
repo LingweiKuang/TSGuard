@@ -63,4 +63,8 @@ public class IotDBQuerySynthesisFeedbackManager {
     public static long incrementInvalidQueryCount() {
         return queryExecutionStatistical.incrementInvalidQueryCount();
     }
+
+    public static long incrementCalculateTimeOverhead(long calculateTimeOverhead) {
+        return queryExecutionStatistical.incrementCalculateTimeOverhead(calculateTimeOverhead);
+    }
 }

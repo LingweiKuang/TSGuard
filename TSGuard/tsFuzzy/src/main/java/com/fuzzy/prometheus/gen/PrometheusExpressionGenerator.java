@@ -12,13 +12,11 @@ import com.fuzzy.prometheus.PrometheusSchema.PrometheusColumn;
 import com.fuzzy.prometheus.PrometheusSchema.PrometheusDataType;
 import com.fuzzy.prometheus.PrometheusSchema.PrometheusRowValue;
 import com.fuzzy.prometheus.ast.*;
-import com.fuzzy.prometheus.ast.PrometheusBinaryArithmeticOperation.PrometheusBinaryArithmeticOperator;
 import com.fuzzy.prometheus.ast.PrometheusBinaryComparisonOperation.BinaryComparisonOperator;
 import com.fuzzy.prometheus.ast.PrometheusBinaryLogicalOperation.PrometheusBinaryLogicalOperator;
 import com.fuzzy.prometheus.ast.PrometheusUnaryPrefixOperation.PrometheusUnaryPrefixOperator;
 import com.fuzzy.prometheus.feedback.PrometheusQuerySynthesisFeedbackManager;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.util.ObjectUtils;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -49,61 +47,7 @@ public class PrometheusExpressionGenerator extends UntypedExpressionGenerator<Pr
         // TODO
         // 查询有效性（靠标记规避语法不符合的节点）
         // 经过严格配对实验，以下各种组合均属于语法错误
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.UNARY_PREFIX_OPERATION, Actions.UNARY_NOT_PREFIX_OPERATION));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.UNARY_PREFIX_OPERATION, Actions.UNARY_POSTFIX));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.UNARY_PREFIX_OPERATION, Actions.BINARY_LOGICAL_OPERATOR));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.UNARY_PREFIX_OPERATION, Actions.BINARY_COMPARISON_OPERATION));
-
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.UNARY_POSTFIX, Actions.UNARY_NOT_PREFIX_OPERATION));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.UNARY_POSTFIX, Actions.UNARY_POSTFIX));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.UNARY_POSTFIX, Actions.BINARY_LOGICAL_OPERATOR));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.UNARY_POSTFIX, Actions.BINARY_COMPARISON_OPERATION));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.UNARY_POSTFIX, Actions.IN_OPERATION));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.UNARY_POSTFIX, Actions.BETWEEN_OPERATOR));
-
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_LOGICAL_OPERATOR, Actions.COLUMN));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_LOGICAL_OPERATOR, Actions.LITERAL));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_LOGICAL_OPERATOR, Actions.UNARY_PREFIX_OPERATION));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_LOGICAL_OPERATOR, Actions.BINARY_OPERATION));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_LOGICAL_OPERATOR, Actions.BINARY_ARITHMETIC_OPERATION));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_LOGICAL_OPERATOR, Actions.CAST_OPERATOR));
-//
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_COMPARISON_OPERATION, Actions.UNARY_NOT_PREFIX_OPERATION));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_COMPARISON_OPERATION, Actions.UNARY_POSTFIX));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_COMPARISON_OPERATION, Actions.BINARY_LOGICAL_OPERATOR));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_COMPARISON_OPERATION, Actions.BINARY_COMPARISON_OPERATION));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_COMPARISON_OPERATION, Actions.BETWEEN_OPERATOR));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_COMPARISON_OPERATION, Actions.IN_OPERATION));
-
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_OPERATION, Actions.UNARY_NOT_PREFIX_OPERATION));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_OPERATION, Actions.UNARY_POSTFIX));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_OPERATION, Actions.BINARY_LOGICAL_OPERATOR));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_OPERATION, Actions.BINARY_COMPARISON_OPERATION));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_OPERATION, Actions.BETWEEN_OPERATOR));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_OPERATION, Actions.IN_OPERATION));
-
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_ARITHMETIC_OPERATION, Actions.UNARY_NOT_PREFIX_OPERATION));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_ARITHMETIC_OPERATION, Actions.UNARY_POSTFIX));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_ARITHMETIC_OPERATION, Actions.BINARY_LOGICAL_OPERATOR));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_ARITHMETIC_OPERATION, Actions.BINARY_COMPARISON_OPERATION));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_ARITHMETIC_OPERATION, Actions.BETWEEN_OPERATOR));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_ARITHMETIC_OPERATION, Actions.IN_OPERATION));
-
-        // BETWEEN 不支持BOOL
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BETWEEN_OPERATOR, Actions.BINARY_COMPARISON_OPERATION));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BETWEEN_OPERATOR, Actions.BINARY_LOGICAL_OPERATOR));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BETWEEN_OPERATOR, Actions.UNARY_NOT_PREFIX_OPERATION));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BETWEEN_OPERATOR, Actions.UNARY_POSTFIX));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BETWEEN_OPERATOR, Actions.BETWEEN_OPERATOR));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BETWEEN_OPERATOR, Actions.IN_OPERATION));
-//
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.IN_OPERATION, Actions.UNARY_NOT_PREFIX_OPERATION));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.IN_OPERATION, Actions.BINARY_LOGICAL_OPERATOR));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.IN_OPERATION, Actions.UNARY_POSTFIX));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.IN_OPERATION, Actions.BINARY_LOGICAL_OPERATOR));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.IN_OPERATION, Actions.BINARY_COMPARISON_OPERATION));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.IN_OPERATION, Actions.BETWEEN_OPERATOR));
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.IN_OPERATION, Actions.IN_OPERATION));
+//        pairingProhibited.add(genHashKeyWithPairActions(Actions.LITERAL, Actions.LITERAL));
     }
 
     private String genHashKeyWithPairActions(final Actions parentNode, final Actions childNode) {
@@ -111,23 +55,14 @@ public class PrometheusExpressionGenerator extends UntypedExpressionGenerator<Pr
     }
 
     private enum Actions {
-        COLUMN(false), LITERAL(false), UNARY_PREFIX_OPERATION(false),
-        BINARY_LOGICAL_OPERATOR(true), BINARY_COMPARISON_OPERATION(true),
-        BINARY_ARITHMETIC_OPERATION(false),
+        COLUMN, LITERAL, UNARY_PREFIX_OPERATION,
+        BINARY_LOGICAL_OPERATOR, BINARY_COMPARISON_OPERATION,
+        //        BINARY_ARITHMETIC_OPERATION,
+        UNARY_NOT_PREFIX_OPERATION,
 //        BETWEEN_OPERATOR(true), CAST_OPERATOR(false),
 //        BINARY_OPERATION(false), IN_OPERATION(true),
-//        UNARY_NOT_PREFIX_OPERATION(true), UNARY_POSTFIX(true), COMPUTABLE_FUNCTION(false),
+//        UNARY_POSTFIX(true), COMPUTABLE_FUNCTION(false),
         ;
-
-        private boolean resultIsLogic;
-
-        Actions(boolean resultIsLogic) {
-            this.resultIsLogic = resultIsLogic;
-        }
-
-        public boolean isResultIsLogic() {
-            return resultIsLogic;
-        }
     }
 
     @Override
@@ -163,14 +98,16 @@ public class PrometheusExpressionGenerator extends UntypedExpressionGenerator<Pr
             case LITERAL:
                 expression = generateConstant();
                 break;
-//            case UNARY_NOT_PREFIX_OPERATION:
-//                PrometheusExpression subExpression = generateExpression(actions, depth + 1);
-//                expression = new PrometheusUnaryNotPrefixOperation(
-//                        subExpression, PrometheusUnaryNotPrefixOperator.getRandom(subExpression));
-//                break;
+            case UNARY_NOT_PREFIX_OPERATION:
+                PrometheusExpression subExpression = generateExpression(actions, depth + 1);
+                expression = new PrometheusUnaryNotPrefixOperation(subExpression,
+                        PrometheusUnaryNotPrefixOperation.PrometheusUnaryNotPrefixOperator.getRandom(subExpression));
+                break;
             case UNARY_PREFIX_OPERATION:
                 expression = new PrometheusUnaryPrefixOperation(generateExpression(actions, depth + 1),
-                        PrometheusUnaryPrefixOperator.getRandom());
+//                        PrometheusUnaryPrefixOperator.getRandom()
+                        PrometheusUnaryPrefixOperator.PLUS
+                );
                 break;
 //            case CAST_OPERATOR:
 //                PrometheusExpression columnExpr = generateColumn();
@@ -186,14 +123,17 @@ public class PrometheusExpressionGenerator extends UntypedExpressionGenerator<Pr
 //                expression = getComputableFunction();
 //                break;
             case BINARY_LOGICAL_OPERATOR:
-                // 非Boolean值操作符不允许单独出现至AND等后面
-                if (depth >= (state.getOptions().useSyntaxSequence() ?
-                        PrometheusQuerySynthesisFeedbackManager.expressionDepth.get() :
-                        state.getOptions().getMaxExpressionDepth()) - 1)
-                    expression = generateExpression(parentActions, depth);
-                else expression = new PrometheusBinaryLogicalOperation(
-                        generateExpression(actions, depth + 1),
-                        generateExpression(actions, depth + 1),
+                // set operator "and" not allowed in binary scalar expression
+                PrometheusExpression leftExpression = generateExpression(actions, depth + 1);
+                while (leftExpression.isScalarExpression()) {
+                    leftExpression = generateExpression(actions, depth + 1);
+                }
+                PrometheusExpression rightExpression = generateExpression(actions, depth + 1);
+                while (rightExpression.isScalarExpression()) {
+                    rightExpression = generateExpression(actions, depth + 1);
+                }
+
+                expression = new PrometheusBinaryLogicalOperation(leftExpression, rightExpression,
                         PrometheusBinaryLogicalOperator.getRandom());
                 break;
             case BINARY_COMPARISON_OPERATION:
@@ -216,12 +156,13 @@ public class PrometheusExpressionGenerator extends UntypedExpressionGenerator<Pr
 //                        generateExpression(actions, depth + 1),
 //                        PrometheusBinaryOperator.getRandom());
 //                break;
-            case BINARY_ARITHMETIC_OPERATION:
-                expression = new PrometheusBinaryArithmeticOperation(
-                        generateExpression(actions, depth + 1),
-                        generateExpression(actions, depth + 1),
-                        PrometheusBinaryArithmeticOperator.getRandom());
-                break;
+//            case BINARY_ARITHMETIC_OPERATION:
+            // TODO 去除 BINARY_ARITHMETIC_OPERATION
+//                expression = new PrometheusBinaryArithmeticOperation(
+//                        generateExpression(actions, depth + 1),
+//                        generateExpression(actions, depth + 1),
+//                        PrometheusBinaryArithmeticOperator.getRandom());
+//                break;
 //            case BETWEEN_OPERATOR:
 //                expression = new PrometheusBetweenOperation(generateExpression(actions, depth + 1),
 //                        generateExpression(actions, depth + 1),
@@ -235,81 +176,79 @@ public class PrometheusExpressionGenerator extends UntypedExpressionGenerator<Pr
     }
 
     private boolean checkExpressionValidity(final Object parentActions, final Actions childActions) {
-        // 非Boolean值操作符不允许单独出现至AND等后面
-        if (parentActions == null && !childActions.isResultIsLogic()) return false;
-        else if (parentActions == null) return true;
+        if (parentActions == null) return true;
         else if (pairingProhibited.contains(genHashKeyWithPairActions(Actions.valueOf(parentActions.toString()),
                 childActions)))
             return false;
-
         return true;
     }
 
     @Override
     public PrometheusExpression generateExpressionForSyntaxValidity(String fatherActions, String childActions) {
-        if (ObjectUtils.isEmpty(fatherActions)) return generateLeafNode();
-        Actions father = Actions.valueOf(fatherActions);
-
-        try {
-            switch (father) {
-                case COLUMN:
-                    // Prometheus 不支持 cross join, 故 使用AND操作替代, AND 操作不支持COLUMN、LITERAL单列出现, 故parentActions不应为null
-                    return generateColumn();
-                case LITERAL:
-                    return generateConstant();
+        return null;
+//        if (ObjectUtils.isEmpty(fatherActions)) return generateLeafNode();
+//        Actions father = Actions.valueOf(fatherActions);
+//
+//        try {
+//            switch (father) {
+//                case COLUMN:
+//                    // Prometheus 不支持 cross join, 故 使用AND操作替代, AND 操作不支持COLUMN、LITERAL单列出现, 故parentActions不应为null
+//                    return generateColumn();
+//                case LITERAL:
+//                    return generateConstant();
 //                case UNARY_NOT_PREFIX_OPERATION:
 //                    PrometheusExpression subExpression = generateExpressionForSyntaxValidity(childActions, null);
-//                    return new PrometheusUnaryNotPrefixOperation(
-//                            subExpression, PrometheusUnaryNotPrefixOperator.getRandom(subExpression));
-                case UNARY_PREFIX_OPERATION:
-                    PrometheusExpression subExpr = generateExpressionForSyntaxValidity(childActions, null);
-                    PrometheusUnaryPrefixOperator random = PrometheusUnaryPrefixOperator.getRandom();
-                    return new PrometheusUnaryPrefixOperation(subExpr, random);
-//                case CAST_OPERATOR:
-//                    PrometheusExpression columnExpr = generateColumn();
-//                    return new PrometheusCastOperation(columnExpr,
-//                            PrometheusCastOperation.CastType.getRandom(columnExpr.getExpectedValue().getType()));
-//                case UNARY_POSTFIX:
-//                    return new PrometheusUnaryPostfixOperation(generateExpressionForSyntaxValidity(childActions, null),
-//                            Randomly.fromOptions(PrometheusUnaryPostfixOperation.UnaryPostfixOperator.values()),
-//                            Randomly.getBoolean());
-//                case COMPUTABLE_FUNCTION:
-//                    return generateExpressionForSyntaxValidity(fatherActions, childActions);
-                case BINARY_LOGICAL_OPERATOR:
-                    return new PrometheusBinaryLogicalOperation(
-                            generateExpressionForSyntaxValidity(childActions, null),
-                            generateExpressionForSyntaxValidity(childActions, null),
-                            PrometheusBinaryLogicalOperator.getRandom());
-                case BINARY_COMPARISON_OPERATION:
-                    return new PrometheusBinaryComparisonOperation(
-                            generateExpressionForSyntaxValidity(childActions, null),
-                            generateExpressionForSyntaxValidity(childActions, null),
-                            BinaryComparisonOperator.getRandom());
-//                case IN_OPERATION:
-//                    PrometheusExpression expr = generateExpressionForSyntaxValidity(childActions, null);
-//                    List<PrometheusExpression> rightList = new ArrayList<>();
-//                    for (int i = 0; i < 1 + Randomly.smallNumber(); i++)
-//                        rightList.add(generateLeafNode());
-//                    return new PrometheusInOperation(expr, rightList, Randomly.getBoolean());
-//                case BINARY_OPERATION:
-//                    return new PrometheusBinaryOperation(
+//                    return new PrometheusUnaryNotPrefixOperation(subExpression,
+//                            PrometheusUnaryNotPrefixOperation.PrometheusUnaryNotPrefixOperator.getRandom(subExpression));
+//                case UNARY_PREFIX_OPERATION:
+//                    PrometheusExpression subExpr = generateExpressionForSyntaxValidity(childActions, null);
+//                    PrometheusUnaryPrefixOperator random = PrometheusUnaryPrefixOperator.getRandom();
+//                    return new PrometheusUnaryPrefixOperation(subExpr, random);
+////                case CAST_OPERATOR:
+////                    PrometheusExpression columnExpr = generateColumn();
+////                    return new PrometheusCastOperation(columnExpr,
+////                            PrometheusCastOperation.CastType.getRandom(columnExpr.getExpectedValue().getType()));
+////                case UNARY_POSTFIX:
+////                    return new PrometheusUnaryPostfixOperation(generateExpressionForSyntaxValidity(childActions, null),
+////                            Randomly.fromOptions(PrometheusUnaryPostfixOperation.UnaryPostfixOperator.values()),
+////                            Randomly.getBoolean());
+////                case COMPUTABLE_FUNCTION:
+////                    return generateExpressionForSyntaxValidity(fatherActions, childActions);
+//                case BINARY_LOGICAL_OPERATOR:
+//                    return new PrometheusBinaryLogicalOperation(
 //                            generateExpressionForSyntaxValidity(childActions, null),
 //                            generateExpressionForSyntaxValidity(childActions, null),
-//                            PrometheusBinaryOperator.getRandom());
-                case BINARY_ARITHMETIC_OPERATION:
-                    return new PrometheusBinaryArithmeticOperation(
-                            generateExpressionForSyntaxValidity(childActions, null),
-                            generateExpressionForSyntaxValidity(childActions, null),
-                            PrometheusBinaryArithmeticOperator.getRandom());
-//                case BETWEEN_OPERATOR:
-//                    return new PrometheusBetweenOperation(generateExpressionForSyntaxValidity(childActions, null),
-//                            generateLeafNode(), generateLeafNode(), false);
-                default:
-                    throw new AssertionError();
-            }
-        } catch (ReGenerateExpressionException e) {
-            return generateExpressionForSyntaxValidity(fatherActions, childActions);
-        }
+//                            PrometheusBinaryLogicalOperator.getRandom());
+//                case BINARY_COMPARISON_OPERATION:
+//                    return new PrometheusBinaryComparisonOperation(
+//                            generateExpressionForSyntaxValidity(childActions, null),
+//                            generateExpressionForSyntaxValidity(childActions, null),
+//                            BinaryComparisonOperator.getRandom());
+////                case IN_OPERATION:
+////                    PrometheusExpression expr = generateExpressionForSyntaxValidity(childActions, null);
+////                    List<PrometheusExpression> rightList = new ArrayList<>();
+////                    for (int i = 0; i < 1 + Randomly.smallNumber(); i++)
+////                        rightList.add(generateLeafNode());
+////                    return new PrometheusInOperation(expr, rightList, Randomly.getBoolean());
+////                case BINARY_OPERATION:
+////                    return new PrometheusBinaryOperation(
+////                            generateExpressionForSyntaxValidity(childActions, null),
+////                            generateExpressionForSyntaxValidity(childActions, null),
+////                            PrometheusBinaryOperator.getRandom());
+//                case BINARY_ARITHMETIC_OPERATION:
+//                    return new PrometheusBinaryArithmeticOperation(
+//                            generateExpressionForSyntaxValidity(childActions, null),
+//                            generateExpressionForSyntaxValidity(childActions, null),
+//                            PrometheusBinaryArithmeticOperator.getRandom());
+////                case BETWEEN_OPERATOR:
+////                    return new PrometheusBetweenOperation(generateExpressionForSyntaxValidity(childActions, null),
+////                            generateLeafNode(), generateLeafNode(), false);
+//                default:
+//                    throw new AssertionError();
+//            }
+//        } catch (ReGenerateExpressionException e) {
+//            return generateExpressionForSyntaxValidity(fatherActions, childActions);
+//        }
     }
 
     private PrometheusExpression ignoreThisExpr(Object parentActions, Actions action, int depth) {

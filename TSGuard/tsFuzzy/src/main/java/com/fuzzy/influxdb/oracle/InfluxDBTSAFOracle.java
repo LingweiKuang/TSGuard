@@ -14,6 +14,7 @@ import com.fuzzy.common.tsaf.PredicationEquation;
 import com.fuzzy.common.tsaf.QueryType;
 import com.fuzzy.common.tsaf.TableToNullValuesManager;
 import com.fuzzy.common.tsaf.TimeSeriesConstraint;
+import com.fuzzy.common.util.TimeCost;
 import com.fuzzy.influxdb.InfluxDBErrors;
 import com.fuzzy.influxdb.InfluxDBGlobalState;
 import com.fuzzy.influxdb.InfluxDBSchema;
@@ -125,16 +126,19 @@ public class InfluxDBTSAFOracle
     @Override
     protected Map<Long, List<BigDecimal>> getExpectedValues(InfluxDBExpression expression) {
         // 联立方程式求解
+        TimeCost timeCost = new TimeCost().begin();
         String databaseName = globalState.getDatabaseName();
         String tableName = table.getName();
         List<String> fetchColumnNames = columns.stream().map(AbstractTableColumn::getName).collect(Collectors.toList());
         TimeSeriesConstraint timeSeriesConstraint = InfluxDBVisitor.asConstraint(databaseName, tableName,
                 expression, TableToNullValuesManager.getNullValues(databaseName, tableName));
         PredicationEquation predicationEquation = new PredicationEquation(timeSeriesConstraint, "equationName");
-        return predicationEquation.genExpectedResultSet(databaseName, tableName, fetchColumnNames,
+        Map<Long, List<BigDecimal>> resultSet = predicationEquation.genExpectedResultSet(databaseName, tableName, fetchColumnNames,
                 globalState.getOptions().getStartTimestampOfTSData(),
                 InfluxDBInsertGenerator.getLastTimestamp(databaseName, tableName),
                 InfluxDBConstant.createFloatArithmeticTolerance());
+        InfluxDBQuerySynthesisFeedbackManager.incrementCalculateTimeOverhead(timeCost.end().getCost());
+        return resultSet;
     }
 
     @Override

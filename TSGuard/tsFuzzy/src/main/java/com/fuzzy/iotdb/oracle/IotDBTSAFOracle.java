@@ -15,6 +15,7 @@ import com.fuzzy.common.tsaf.QueryType;
 import com.fuzzy.common.tsaf.TableToNullValuesManager;
 import com.fuzzy.common.tsaf.TimeSeriesConstraint;
 import com.fuzzy.common.tsaf.util.GenerateTimestampUtil;
+import com.fuzzy.common.util.TimeCost;
 import com.fuzzy.iotdb.IotDBErrors;
 import com.fuzzy.iotdb.IotDBGlobalState;
 import com.fuzzy.iotdb.IotDBSchema;
@@ -130,16 +131,19 @@ public class IotDBTSAFOracle
     @Override
     protected Map<Long, List<BigDecimal>> getExpectedValues(IotDBExpression expression) {
         // 联立方程式求解
+        TimeCost timeCost = new TimeCost().begin();
         String databaseName = globalState.getDatabaseName();
         String tableName = table.getName();
         List<String> fetchColumnNames = columns.stream().map(AbstractTableColumn::getName).collect(Collectors.toList());
         TimeSeriesConstraint timeSeriesConstraint = IotDBVisitor.asConstraint(databaseName, tableName,
                 expression, TableToNullValuesManager.getNullValues(databaseName, tableName));
         PredicationEquation predicationEquation = new PredicationEquation(timeSeriesConstraint, "equationName");
-        return predicationEquation.genExpectedResultSet(databaseName, tableName, fetchColumnNames,
+        Map<Long, List<BigDecimal>> resultSet = predicationEquation.genExpectedResultSet(databaseName, tableName, fetchColumnNames,
                 globalState.getOptions().getStartTimestampOfTSData(),
                 IotDBInsertGenerator.getLastTimestamp(databaseName, tableName),
                 IotDBConstant.createFloatArithmeticTolerance());
+        IotDBQuerySynthesisFeedbackManager.incrementCalculateTimeOverhead(timeCost.end().getCost());
+        return resultSet;
     }
 
     @Override

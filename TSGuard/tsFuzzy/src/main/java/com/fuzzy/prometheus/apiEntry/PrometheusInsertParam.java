@@ -14,10 +14,10 @@ import java.util.Map;
 @Data
 public class PrometheusInsertParam {
     // <MetricName, Collector>
-    Map<String, CollectorAttribute> collectorList;
+    Map<String, CollectorAttribute> collectorMap;
 
     public PrometheusInsertParam() {
-        this.collectorList = new HashMap<>();
+        this.collectorMap = new HashMap<>();
     }
 
     public byte[] snappyCompressedRequest(String metricName) throws IOException {
@@ -27,7 +27,7 @@ public class PrometheusInsertParam {
     }
 
     public Request createRequestForRemoteWrite(String metricName) {
-        return collectorList.get(metricName).createRequestForRemoteWrite();
+        return collectorMap.get(metricName).createRequestForRemoteWrite();
     }
 
     public String genPrometheusQueryParam() {

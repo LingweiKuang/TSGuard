@@ -9,6 +9,7 @@ public class QueryExecutionStatistical {
     private final AtomicLong successQueryCounter = new AtomicLong();
     private final AtomicLong errorQueryCounter = new AtomicLong();
     private final AtomicLong invalidQueryCounter = new AtomicLong();
+    private final AtomicLong calculateTimeOverhead = new AtomicLong();
 
     public long incrementSuccessQueryCount() {
         return successQueryCounter.incrementAndGet();
@@ -22,16 +23,22 @@ public class QueryExecutionStatistical {
         return invalidQueryCounter.incrementAndGet();
     }
 
-    public enum QueryExecutionType {
-        success, error, invalid
+    public long incrementCalculateTimeOverhead(long calculateTimeOverhead) {
+        return this.calculateTimeOverhead.getAndAdd(calculateTimeOverhead);
     }
 
     @Override
     public String toString() {
         return "QueryExecutionStatistical{" +
-                "successQueryCounter=" + successQueryCounter.get() +
-                ", errorQueryCounter=" + errorQueryCounter.get() +
-                ", invalidQueryCounter=" + invalidQueryCounter.get() +
+                "successQueryCounter=" + successQueryCounter +
+                ", errorQueryCounter=" + errorQueryCounter +
+                ", invalidQueryCounter=" + invalidQueryCounter +
+                ", calculateTimeOverhead=" + calculateTimeOverhead +
                 '}';
     }
+
+    public enum QueryExecutionType {
+        success, error, invalid
+    }
+
 }

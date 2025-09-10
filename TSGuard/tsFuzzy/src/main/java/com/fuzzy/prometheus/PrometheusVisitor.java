@@ -31,7 +31,7 @@ public interface PrometheusVisitor {
 
     void visit(PrometheusUnaryPrefixOperation op);
 
-//    void visit(PrometheusUnaryNotPrefixOperation op);
+    void visit(PrometheusUnaryNotPrefixOperation op);
 
     void visit(PrometheusBinaryArithmeticOperation op);
 
@@ -113,6 +113,7 @@ public interface PrometheusVisitor {
 
     static TimeSeriesConstraint asConstraint(String databaseName, String tableName,
                                              PrometheusExpression expr, Set<Long> nullValuesSet) {
+        // 获取时序约束，将所有约束全部转为针对时间戳的限制
         PrometheusToConstraintVisitor visitor = new PrometheusToConstraintVisitor(databaseName, tableName, nullValuesSet);
         visitor.visit(expr);
         TimeSeriesConstraint timeSeriesConstraint = visitor.constraintStack.pop().getTimeSeriesConstraint();

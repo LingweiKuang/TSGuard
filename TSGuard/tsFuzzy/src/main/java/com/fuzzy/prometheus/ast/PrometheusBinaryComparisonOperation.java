@@ -17,7 +17,7 @@ public class PrometheusBinaryComparisonOperation implements PrometheusExpression
                 return this;
             }
         },
-        NOT_EQUALS("!=", "<>") {
+        NOT_EQUALS("!=") {
             @Override
             public PrometheusConstant getExpectedValue(PrometheusConstant leftVal, PrometheusConstant rightVal) {
                 PrometheusConstant isEquals = leftVal.isEquals(rightVal);
@@ -141,6 +141,11 @@ public class PrometheusBinaryComparisonOperation implements PrometheusExpression
     @Override
     public PrometheusConstant getExpectedValue() {
         return op.getExpectedValue(left.getExpectedValue(), right.getExpectedValue());
+    }
+
+    @Override
+    public boolean isScalarExpression() {
+        return left.isScalarExpression() && right.isScalarExpression();
     }
 
     public boolean containsEqual() {
