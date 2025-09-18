@@ -49,7 +49,7 @@ TSGuard: Detecting Logic Bugs in Time Series Management Systems via Time Series 
 | 41   | https://github.com/taosdata/TDengine/issues/28990 | 2024/11/30 | verified       | Logic    | TDengine | Basic            |
 | 42   | https://github.com/taosdata/TDengine/issues/29047 | 2024/12/5  | fixed          | Logic    | TDengine | Basic            |
 | 43   | https://github.com/taosdata/TDengine/issues/29048 | 2024/12/5  | False positive | Logic    | TDengine | Basic            |
-| 44   | https://github.com/taosdata/TDengine/issues/29059 | 2024/12/6  | reported       | Logic    | TDengine | Basic            |
+| 44   | https://github.com/taosdata/TDengine/issues/29059 | 2024/12/6  | fixed       | Logic    | TDengine | Basic            |
 | 45   | https://github.com/taosdata/TDengine/issues/29064 | 2024/12/9  | False positive | Logic    | TDengine | Basic            |
 | 46   | https://github.com/taosdata/TDengine/issues/29067 | 2024/12/9  | fixed          | Logic    | TDengine | Basic            |
 | 47   | https://github.com/taosdata/TDengine/issues/29263 | 2024/12/21 | verified       | Logic    | TDengine | Time Series Func |
