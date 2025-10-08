@@ -15,8 +15,9 @@
     <name>common</name>
 
     <properties>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <java.version>17</java.version>
         <kotlin.version>1.4.10</kotlin.version>
         <relativePath>../pom.xml</relativePath>  <!-- 若无该相对路径，导入Maven项目时，可能该模块pom依赖无法加载 -->
     </properties>
