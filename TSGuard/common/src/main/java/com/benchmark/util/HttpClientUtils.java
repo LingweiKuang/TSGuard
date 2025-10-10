@@ -10,12 +10,9 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLConnection;
 import java.util.Map;
 import java.util.Set;
 
@@ -142,23 +139,44 @@ public class HttpClientUtils {
     public static boolean sendPointDataToDB(String url, byte[] data, Map<String, String> headers) {
         try {
             URL realUrl = new URL(url);
-            URLConnection conn = realUrl.openConnection();
-            headers.entrySet().forEach(header -> conn.setRequestProperty(header.getKey(), header.getValue()));
+            HttpURLConnection conn = (HttpURLConnection) realUrl.openConnection();
+            headers.forEach(conn::setRequestProperty);
             conn.setRequestProperty("accept", "*/*");
             conn.setDoOutput(true);
             conn.setDoInput(true);
             // fill and send content
-            DataOutputStream dos = new DataOutputStream(conn.getOutputStream());
-            dos.write(data);
-            dos.flush();
-            // get response (Do not comment this line, or the data insertion will be failed)
-            BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-//            String line;
-//            while ((line = in.readLine()) != null) {
-//                result += line;
-//            }
-//            System.out.println(result);
-            return true;
+            try (DataOutputStream dos = new DataOutputStream(conn.getOutputStream())) {
+                dos.write(data);
+                dos.flush();
+            }
+
+            // 获取返回码
+            int responseCode = conn.getResponseCode();
+            String responseMessage = conn.getResponseMessage();
+            if (responseCode < 200 || responseCode >= 300) {
+                log.error("远程写入值异常, HTTP Response: {} {}", responseCode, responseMessage);
+            }
+
+            // 读取响应内容（无论是否 2xx）
+            InputStream responseStream =
+                    responseCode >= 200 && responseCode < 300
+                            ? conn.getInputStream()
+                            : conn.getErrorStream();
+
+            if (responseStream != null) {
+                try (BufferedReader in = new BufferedReader(new InputStreamReader(responseStream))) {
+                    StringBuilder responseBody = new StringBuilder();
+                    String line;
+                    while ((line = in.readLine()) != null) {
+                        responseBody.append(line);
+                    }
+                    if (responseCode < 200 || responseCode >= 300) {
+                        log.info("远程写入值异常, Response body: {}", responseBody);
+                    }
+                }
+            }
+
+            return responseCode >= 200 && responseCode < 300;
         } catch (Exception e) {
             log.error("发送错误, e:", e);
             return false;

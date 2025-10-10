@@ -82,6 +82,7 @@ public class SamplingFrequency {
     }
 
     public BigDecimal getSeqByTimestamp(long timestamp) {
+        // 取值范围 [1, ∞)
         BigDecimal seq = binarySearchTimestamp(timestamp);
         if (seq.compareTo(BigDecimal.ZERO) != 0) return seq;
         // TODO Prometheus

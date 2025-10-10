@@ -18,7 +18,8 @@ import java.util.Map;
 
 public class PrometheusTableGenerator {
 
-    public static final long SAMPLING_NUMBER = 30;
+    // TODO 鉴于回补数据缺陷(写入速度过慢会导致写入异常), 暂时不考虑将 SAMPLING_NUMBER 参数设置过大
+    public static final long SAMPLING_NUMBER = 10;
     private final String tableName;
     private final Randomly r;
     private final List<String> columns = new ArrayList<>();
@@ -51,6 +52,7 @@ public class PrometheusTableGenerator {
         for (int i = 0; i < 1 + Randomly.smallNumber(); i++) {
             String columnName = genColumn(i);
             CollectorAttribute attribute = new CollectorAttribute();
+            // TODO init 类型和后续生成值类型需要保持一致
             attribute.setDataType(PrometheusDataType.getRandom(globalState));
             attribute.setMetricName(globalState.getDatabaseName());
             attribute.setHelp(String.format("%s.%s.%s", globalState.getDatabaseName(), tableName, columnName));
@@ -58,7 +60,7 @@ public class PrometheusTableGenerator {
             attribute.setTableName(tableName);
             attribute.setTimeSeriesName(columnName);
             attribute.randomInitValue(globalState.getOptions().getStartTimestampOfTSData());
-            collectorMap.put(attribute.getMetricName(), attribute);
+            collectorMap.put(attribute.getUniqueHashKey(), attribute);
         }
 
         PrometheusInsertParam insertParam = new PrometheusInsertParam();

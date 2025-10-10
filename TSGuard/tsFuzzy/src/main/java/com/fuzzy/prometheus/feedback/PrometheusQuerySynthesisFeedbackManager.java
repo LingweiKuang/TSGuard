@@ -13,7 +13,8 @@ public class PrometheusQuerySynthesisFeedbackManager {
     public static final Integer MAX_EXECUTION_COUNT = 10;
     public static final Integer MAX_REGENERATE_COUNT_PER_ROUND = 10;
 
-    public static AtomicInteger expressionDepth = new AtomicInteger(0);
+    // TODO set to zero.
+    public static AtomicInteger expressionDepth = new AtomicInteger(1);
     public static final QuerySynthesisFeedback querySynthesisFeedback = new QuerySynthesisFeedback();
     public static final QueryExecutionStatistical queryExecutionStatistical = new QueryExecutionStatistical();
     private static final Set<String> reportedBugSequence = new HashSet<>();

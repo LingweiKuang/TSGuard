@@ -19,4 +19,8 @@ public class PrometheusGlobalState extends SQLGlobalState<PrometheusOptions, Pro
     public boolean usesTSAF() {
         return getDbmsSpecificOptions().oracles.stream().anyMatch(o -> o == PrometheusOracleFactory.TSAF);
     }
+
+    public boolean usesStreamComputing() {
+        return getDbmsSpecificOptions().oracles.stream().anyMatch(o -> o == PrometheusOracleFactory.StreamComputing);
+    }
 }

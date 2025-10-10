@@ -30,14 +30,14 @@ public class TestPrometheus {
                 Main.executeMain(new String[]{"--random-seed", "-1", "--timeout-seconds", TestConfig.SECONDS,
                         "--num-threads", "1", "--host", "localhost", "--port", "9090", "--precision", "ms",
                         "--log-syntax-error-query", "true", "--max-expression-depth", "4",
-                        "--log-execution-time", "false", "--num-tries", "2000",
+                        "--log-execution-time", "false", "--num-tries", "100",
                         "--start-timestamp", String.valueOf(startTimestamp),
 //                        "--drop-database",
                         "--params", "",
                         "--use-syntax-validator", "--use-syntax-sequence",
                         "--random-string-generation", "ALPHANUMERIC", "--database-prefix",
                         "tsafdb", "--max-generated-databases", "1",
-                        "--num-queries", TestConfig.NUM_QUERIES, GlobalConstant.PROMETHEUS_DATABASE_NAME, "--oracle", "TSAF"}));
+                        "--num-queries", TestConfig.NUM_QUERIES, GlobalConstant.PROMETHEUS_DATABASE_NAME, "--oracle", "StreamComputing"}));
     }
 
     // curl -X POST -g 'http://127.0.0.1:9090/api/v1/admin/tsdb/delete_series?match[]=tsafdbconnectiontest'

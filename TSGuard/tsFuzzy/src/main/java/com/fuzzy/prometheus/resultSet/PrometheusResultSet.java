@@ -4,6 +4,9 @@ import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.benchmark.entity.DBValResultSet;
+import com.fuzzy.common.streamprocessing.constant.TimeSeriesLabelConstant;
+import com.fuzzy.common.streamprocessing.entity.TimeSeriesElement;
+import com.fuzzy.common.streamprocessing.entity.TimeSeriesStream;
 import com.fuzzy.prometheus.apiEntry.PrometheusRequestType;
 import lombok.Data;
 import org.springframework.util.ObjectUtils;
@@ -105,6 +108,69 @@ public class PrometheusResultSet extends DBValResultSet {
 //            throw new SQLException(e.getMessage());
 //        }
         return 0;
+    }
+
+    /**
+     * 解析 JSON 为 TimeSeriesStream
+     *
+     * @return
+     * @throws SQLException
+     */
+    public TimeSeriesStream genTimeSeriesStream() throws SQLException {
+        // 将整个结果集转换为 时间戳 -> 结果列表 的组合
+        TimeSeriesStream.TimeSeriesVector timeSeriesVector = new TimeSeriesStream.TimeSeriesVector();
+        // 查询结果为空
+        JSONArray resultArray = ((JSONObject) jsonResult).getJSONArray("result");
+        if (ObjectUtils.isEmpty(resultArray)) return timeSeriesVector;
+
+        // 遍历每条时间序列, 进行 element 赋值
+        for (int i = 0; i < resultArray.size(); i++) {
+            JSONObject row = (JSONObject) resultArray.get(i);
+            JSONArray values = null;
+            switch (this.prometheusRequestType) {
+                case INSTANT_QUERY:
+                    values = row.getJSONArray("value");
+                    break;
+                case RANGE_QUERY:
+                    values = row.getJSONArray("values");
+                    break;
+                default:
+                    throw new SQLException(String.format("prometheusRequestType not support! val:%s", prometheusRequestType));
+            }
+
+            // timestamp and value
+            Map<Long, BigDecimal> timestampToValues = new HashMap<>();
+            for (int j = 0; j < values.size(); j++) {
+                Long timestamp = Long.parseLong(values.getJSONArray(j).getString(0));
+                String strValue = values.getJSONArray(j).getString(1);
+                BigDecimal value;
+                value = switch (strValue) {
+                    case "+Inf" -> TimeSeriesStream.INF_BIGDECIMAL;
+                    case "-Inf" -> TimeSeriesStream.NEGATE_INF_BIGDECIMAL;
+                    case "NaN" -> TimeSeriesStream.NAN_BIGDECIMAL;
+                    default -> new BigDecimal(strValue);
+                };
+                timestampToValues.put(timestamp, value);
+            }
+
+            // label sets
+            JSONObject metricObject = row.getJSONObject("metric");
+            String metricName = metricObject.getString(TimeSeriesLabelConstant.METRIC_KEY.getLabel());
+            metricName = metricName == null ? "" : metricName;
+            HashMap<String, String> labelSets = new HashMap<>() {{
+                put(TimeSeriesLabelConstant.TABLE.getLabel(), metricObject.getString(TimeSeriesLabelConstant.TABLE.getLabel()));
+                put(TimeSeriesLabelConstant.TIME_SERIES.getLabel(),
+                        metricObject.getString(TimeSeriesLabelConstant.TIME_SERIES.getLabel()));
+            }};
+
+            // element
+            TimeSeriesElement timeSeriesElement = new TimeSeriesElement(labelSets, timestampToValues);
+            timeSeriesVector.getElements().put(timeSeriesElement.getLabelSetsHashKey(metricName), timeSeriesElement);
+            // TODO name 暂时取最后一个时间序列, 暂时不考虑跨 metric name 进行数值比较
+            timeSeriesVector.setName(metricName);
+        }
+
+        return timeSeriesVector;
     }
 
     public Map<Long, List<BigDecimal>> genTimestampToValuesMap() throws SQLException {

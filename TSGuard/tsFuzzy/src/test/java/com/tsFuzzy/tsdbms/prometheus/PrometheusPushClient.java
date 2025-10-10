@@ -5,6 +5,8 @@ import build.buf.gen.io.prometheus.write.v2.Sample;
 import build.buf.gen.io.prometheus.write.v2.TimeSeries;
 import build.buf.gen.prometheus.Label;
 import com.benchmark.util.HttpClientUtils;
+import com.fuzzy.prometheus.PrometheusConnection;
+import com.fuzzy.prometheus.PrometheusStatement;
 import com.fuzzy.prometheus.apiEntry.PrometheusInsertParam;
 import com.fuzzy.prometheus.apiEntry.entity.CollectorAttribute;
 import com.google.protobuf.ByteString;
@@ -25,7 +27,7 @@ import java.util.stream.IntStream;
 
 public class PrometheusPushClient {
 
-    private static final String ENDPOINT_URL = "http://172.29.185.200:9090/api/v1/write";
+    private static final String ENDPOINT_URL = "http://localhost:9090/api/v1/write";
 
     public static void main(String[] args) throws IOException {
         // 创建指标数据
@@ -136,6 +138,40 @@ public class PrometheusPushClient {
         headers.put("X-Prometheus-Remote-Write-Version", "2.0.0");
         boolean res = HttpClientUtils.sendPointDataToDB(ENDPOINT_URL, compressed, headers);
         boolean res2 = HttpClientUtils.sendPointDataToDB(ENDPOINT_URL, compressed2, headers);
+    }
+
+    @Test
+    public void testPrometheusConnection() throws Exception {
+        String host = "localhost";
+        int port = 9090;
+
+        CollectorAttribute collectorAttribute = new CollectorAttribute();
+        String metricName = "tsafdb_0_a12d53b5_1cdc_4301_bdac_77fea73f7629";
+        // attribute
+        collectorAttribute.setMetricName(metricName);
+        collectorAttribute.setTableName("t0");
+        collectorAttribute.setTimeSeriesName("ts8");
+        collectorAttribute.getDoubleValues().add(40.0);
+        collectorAttribute.getTimestamps().add(1759909216000L);
+        // attribute 0
+        CollectorAttribute collectorAttribute0 = new CollectorAttribute();
+        collectorAttribute0.setMetricName(metricName);
+        collectorAttribute0.setTableName("t1");
+        collectorAttribute0.setTimeSeriesName("ts8");
+        collectorAttribute0.getDoubleValues().add(40.0);
+        collectorAttribute0.getTimestamps().add(1759909096000L);
+
+        Map<String, CollectorAttribute> collectorMap = new HashMap<>();
+        collectorMap.put(collectorAttribute.getUniqueHashKey(), collectorAttribute);
+        collectorMap.put(collectorAttribute0.getUniqueHashKey(), collectorAttribute0);
+        PrometheusInsertParam insertParam = new PrometheusInsertParam();
+        insertParam.setCollectorMap(collectorMap);
+        String requestParam = insertParam.genPrometheusQueryParam();
+
+        PrometheusConnection prometheusConnection = new PrometheusConnection(host, port);
+        try (PrometheusStatement s = prometheusConnection.createStatement()) {
+            s.execute(requestParam);
+        }
     }
 
     @Test

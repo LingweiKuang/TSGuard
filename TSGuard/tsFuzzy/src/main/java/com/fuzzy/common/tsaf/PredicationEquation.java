@@ -15,6 +15,7 @@ import java.util.Map;
 @Data
 @Slf4j
 public class PredicationEquation {
+    // 依据时序约束计算符合条件的预期结果集
     // 多列筛选
     private TimeSeriesConstraint timeSeriesConstraint;
     private String equationName;

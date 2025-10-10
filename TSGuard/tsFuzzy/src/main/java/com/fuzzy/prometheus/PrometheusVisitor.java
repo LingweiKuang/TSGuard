@@ -2,11 +2,13 @@ package com.fuzzy.prometheus;
 
 
 import com.fuzzy.common.constant.GlobalConstant;
+import com.fuzzy.common.streamprocessing.entity.TimeSeriesStream;
 import com.fuzzy.common.tsaf.RangeConstraint;
 import com.fuzzy.common.tsaf.TimeSeriesConstraint;
 import com.fuzzy.common.tsaf.samplingfrequency.SamplingFrequencyManager;
 import com.fuzzy.prometheus.ast.*;
 
+import java.util.List;
 import java.util.Set;
 
 public interface PrometheusVisitor {
@@ -124,6 +126,18 @@ public interface PrometheusVisitor {
         nullValuesSet.forEach(timestamp -> nullValueFilter.addNotEqualValue(SamplingFrequencyManager.getInstance()
                 .getSamplingFrequencyFromCollection(databaseName, tableName).getSeqByTimestamp(timestamp)));
         return timeSeriesConstraint.intersects(nullValueFilter);
+    }
+
+    static TimeSeriesStream streamComputeTimeSeriesVector(String databaseName,
+                                                          List<String> fetchColumnNames, Long startTimestamp,
+                                                          PrometheusExpression expr, Set<Long> nullValuesSet) {
+        // 获取时序约束，将所有约束全部转为针对时间戳的限制
+        PrometheusStreamComputingVisitor visitor = new PrometheusStreamComputingVisitor(databaseName, fetchColumnNames,
+                startTimestamp, nullValuesSet);
+        visitor.visit(expr);
+        TimeSeriesStream timeSeriesStream = visitor.timeSeriesStreamStack.pop();
+        // TODO 存在列运算, 进行空值过滤(时间戳)
+        return timeSeriesStream;
     }
 
 }

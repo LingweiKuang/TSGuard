@@ -1,0 +1,19 @@
+nrQueries:3062
+nrDatabases:100
+nrSuccessfulActions:6910
+nrUnsuccessfulActions:0
+TDengine表达式迭代深度:0
+查询统计信息:QueryExecutionStatistical{successQueryCounter=0, errorQueryCounter=0, invalidQueryCounter=0, calculateTimeOverhead=0}
+查询语法序列数目:0
+invalidQueryCounter:0
+{}
+IotDB表达式迭代深度:0
+查询统计信息:QueryExecutionStatistical{successQueryCounter=0, errorQueryCounter=0, invalidQueryCounter=0, calculateTimeOverhead=0}
+查询语法序列数目:0
+invalidQueryCounter:0
+{}
+InfluxDB表达式迭代深度:0
+查询统计信息:QueryExecutionStatistical{successQueryCounter=0, errorQueryCounter=0, invalidQueryCounter=0, calculateTimeOverhead=0}
+查询语法序列数目:0
+invalidQueryCounter:0
+{}

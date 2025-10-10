@@ -7,6 +7,7 @@ import com.fuzzy.OracleFactory;
 import com.fuzzy.common.oracle.TestOracle;
 import com.fuzzy.prometheus.PrometheusOptions.PrometheusOracleFactory;
 import com.fuzzy.prometheus.oracle.PrometheusPivotedQuerySynthesisOracle;
+import com.fuzzy.prometheus.oracle.PrometheusStreamComputingOracle;
 import com.fuzzy.prometheus.oracle.PrometheusTSAFOracle;
 
 import java.sql.SQLException;
@@ -20,7 +21,7 @@ public class PrometheusOptions implements DBMSSpecificOptions<PrometheusOracleFa
     public static final int DEFAULT_PORT = 9090;
 
     @Parameter(names = "--oracle")
-    public List<PrometheusOracleFactory> oracles = Arrays.asList(PrometheusOracleFactory.TSAF);
+    public List<PrometheusOracleFactory> oracles = Arrays.asList(PrometheusOracleFactory.StreamComputing);
 
     public enum PrometheusOracleFactory implements OracleFactory<PrometheusGlobalState> {
 
@@ -46,7 +47,17 @@ public class PrometheusOptions implements DBMSSpecificOptions<PrometheusOracleFa
             public boolean requiresAllTablesToContainRows() {
                 return true;
             }
+        },
+        StreamComputing {
+            @Override
+            public TestOracle<PrometheusGlobalState> create(PrometheusGlobalState globalState) throws Exception {
+                return new PrometheusStreamComputingOracle(globalState);
+            }
 
+            @Override
+            public boolean requiresAllTablesToContainRows() {
+                return true;
+            }
         };
     }
 

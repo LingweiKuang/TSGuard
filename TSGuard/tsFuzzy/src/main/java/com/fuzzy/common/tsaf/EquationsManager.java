@@ -4,11 +4,14 @@ import com.fuzzy.common.constant.GlobalConstant;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
 public class EquationsManager {
+    // 以全局唯一 key 管理 Equations 对象
     private volatile static EquationsManager instance;
     // database_table_timeSeries -> Equations
     private final Map<String, Equations> equationsMap = new HashMap<>();
@@ -33,10 +36,21 @@ public class EquationsManager {
         if (TimeSeriesName.endsWith(GlobalConstant.BASE_TIME_SERIES_NAME)) return baseAndBaseEquations;
 
         if (!this.equationsMap.containsKey(genHashKey(databaseName, tableName, TimeSeriesName))) {
-            log.error("{} 列不存在", TimeSeriesName);
+            log.error("databaseName:{} tableName:{} timeSeriesName:{} 列不存在, equationsMap: {}", databaseName,
+                    tableName, TimeSeriesName, this.equationsMap);
             throw new AssertionError();
         }
         return this.equationsMap.get(genHashKey(databaseName, tableName, TimeSeriesName));
+    }
+
+    public List<Equations> getAllEquationsFromDatabase(String databaseName) {
+        List<Equations> equations = new ArrayList<>();
+        for (String hashKey : this.equationsMap.keySet()) {
+            if (hashKey.startsWith(databaseName)) {
+                equations.add(this.equationsMap.get(hashKey));
+            }
+        }
+        return equations;
     }
 
     public Equations initEquationsFromTimeSeries(String databaseName, String tableName, String TimeSeriesName,

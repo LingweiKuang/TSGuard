@@ -13,7 +13,7 @@ import java.util.Map;
 
 @Data
 public class PrometheusInsertParam {
-    // <MetricName, Collector>
+    // <MetricName_, Collector>
     Map<String, CollectorAttribute> collectorMap;
 
     public PrometheusInsertParam() {

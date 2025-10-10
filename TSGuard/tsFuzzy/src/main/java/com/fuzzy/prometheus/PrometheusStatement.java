@@ -149,11 +149,12 @@ public class PrometheusStatement implements TSFuzzyStatement {
         headers.put("Content-Type", "application/x-protobuf;proto=io.prometheus.write.v2.Request");
         headers.put("Content-Encoding", "snappy");
         headers.put("X-Prometheus-Remote-Write-Version", "2.0.0");
+        headers.put("User-Agent", "MyMetricAgent/1.2.3");
 
         // remote write
-        for (String metricName : param.getCollectorMap().keySet()) {
-            log.info("远程写入值: {}", param.getCollectorMap().get(metricName));
-            byte[] compressed = param.snappyCompressedRequest(metricName);
+        for (String uniqueHashKey : param.getCollectorMap().keySet()) {
+            log.info("远程写入值: {}", param.getCollectorMap().get(uniqueHashKey));
+            byte[] compressed = param.snappyCompressedRequest(uniqueHashKey);
             assert HttpClientUtils.sendPointDataToDB(url, compressed, headers);
         }
     }

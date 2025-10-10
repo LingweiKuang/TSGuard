@@ -6,11 +6,11 @@ import com.benchmark.commonClass.TSFuzzyStatement;
 import com.fuzzy.Randomly;
 import com.fuzzy.SQLConnection;
 import com.fuzzy.common.schema.*;
+import com.fuzzy.common.streamprocessing.constant.TimeSeriesLabelConstant;
 import com.fuzzy.prometheus.apiEntry.PrometheusQueryParam;
 import com.fuzzy.prometheus.apiEntry.PrometheusRequestType;
 import com.fuzzy.prometheus.apiEntry.entity.PrometheusSeriesResultItem;
 import com.fuzzy.prometheus.ast.PrometheusConstant;
-import com.fuzzy.prometheus.constant.PrometheusLabelConstant;
 import com.fuzzy.prometheus.resultSet.PrometheusResultSet;
 
 import java.sql.SQLException;
@@ -20,11 +20,17 @@ public class PrometheusSchema extends AbstractSchema<PrometheusGlobalState, Prom
 
     private static final int NR_SCHEMA_READ_TRIES = 10;
 
+    @Override
+    public boolean containsTableWithZeroRows(PrometheusGlobalState globalState) {
+        // Prometheus 默认插入一行数据, 故检测空值改为1
+        return getDatabaseTables().stream().anyMatch(t -> t.getNrRows(globalState) == 1);
+    }
+
     public enum CommonDataType {
         INT, DOUBLE, BOOLEAN, NULL, BIGDECIMAL;
 
         public static CommonDataType getRandom(PrometheusGlobalState globalState) {
-            if (globalState.usesPQS() || globalState.usesTSAF()) {
+            if (globalState.usesPQS() || globalState.usesTSAF() || globalState.usesStreamComputing()) {
                 return Randomly.fromOptions(CommonDataType.INT, CommonDataType.DOUBLE);
             } else {
                 return Randomly.fromOptions(values());
@@ -39,13 +45,15 @@ public class PrometheusSchema extends AbstractSchema<PrometheusGlobalState, Prom
             return new PrometheusSchema.PrometheusDataType[]{GAUGE};
         }
 
-        public static PrometheusSchema.PrometheusDataType[] valuesTSAF() {
+        public static PrometheusSchema.PrometheusDataType[] valuesTSAFOrStreamComputing() {
             return new PrometheusSchema.PrometheusDataType[]{GAUGE};
         }
 
         public static PrometheusDataType getRandom(PrometheusGlobalState globalState) {
-            if (globalState.usesPQS() || globalState.usesTSAF()) {
-                return Randomly.fromOptions(PrometheusDataType.COUNTER, PrometheusDataType.GAUGE);
+            if (globalState.usesPQS() || globalState.usesTSAF() || globalState.usesStreamComputing()) {
+                // TODO
+//                return Randomly.fromOptions(PrometheusDataType.COUNTER, PrometheusDataType.GAUGE);
+                return PrometheusDataType.GAUGE;
             } else {
                 return Randomly.fromOptions(values());
             }
@@ -149,7 +157,7 @@ public class PrometheusSchema extends AbstractSchema<PrometheusGlobalState, Prom
                             PrometheusSeriesResultItem seriesResultItem =
                                     JSONObject.parseObject(rowRecord.toString(), PrometheusSeriesResultItem.class);
                             // DatabaseInit 不纳入数据库表数量计算
-                            if (seriesResultItem.getTable().equals(PrometheusLabelConstant.DATABASE_INIT.getLabel()))
+                            if (seriesResultItem.getTable().equals(TimeSeriesLabelConstant.DATABASE_INIT.getLabel()))
                                 continue;
 
                             if (seriesSet.contains(seriesResultItem)) continue;

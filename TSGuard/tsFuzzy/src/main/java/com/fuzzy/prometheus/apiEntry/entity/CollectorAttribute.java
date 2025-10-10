@@ -3,8 +3,8 @@ package com.fuzzy.prometheus.apiEntry.entity;
 import build.buf.gen.io.prometheus.write.v2.Request;
 import build.buf.gen.io.prometheus.write.v2.Sample;
 import build.buf.gen.io.prometheus.write.v2.TimeSeries;
+import com.fuzzy.common.streamprocessing.constant.TimeSeriesLabelConstant;
 import com.fuzzy.prometheus.PrometheusSchema.PrometheusDataType;
-import com.fuzzy.prometheus.constant.PrometheusLabelConstant;
 import lombok.Data;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -71,10 +71,10 @@ public class CollectorAttribute {
 
         // 处理时序指标
         Map<String, String> labels = new HashMap<>();
-        labels.put(PrometheusLabelConstant.METRIC.getLabel(), metricName);
-        labels.put(PrometheusLabelConstant.TABLE.getLabel(), this.tableName);
+        labels.put(TimeSeriesLabelConstant.METRIC_KEY.getLabel(), metricName);
+        labels.put(TimeSeriesLabelConstant.TABLE.getLabel(), this.tableName);
         if (!StringUtils.isBlank(this.timeSeriesName))
-            labels.put(PrometheusLabelConstant.TIME_SERIES.getLabel(), this.timeSeriesName);
+            labels.put(TimeSeriesLabelConstant.TIME_SERIES.getLabel(), this.timeSeriesName);
         if (!ObjectUtils.isEmpty(this.labels))
             labels.putAll(this.labels);
         // 添加标签按照指标逐条添加至 requestBuilder 符号表（严格交替存储）
@@ -139,4 +139,25 @@ public class CollectorAttribute {
 //                return null;
 //        }
 //    }
+
+    /**
+     * unique hash key: metricName_tableName_timeSeriesName_labelSets
+     *
+     * @return
+     */
+    public String getUniqueHashKey() {
+        StringBuilder uniqueHashKey = new StringBuilder();
+        uniqueHashKey.append(metricName);
+        if (StringUtils.isNotBlank(tableName)) uniqueHashKey.append("_").append(tableName);
+        if (StringUtils.isNotBlank(timeSeriesName)) uniqueHashKey.append("_").append(timeSeriesName);
+
+        if (labels != null) {
+            for (String labelKey : labels.keySet()) {
+                if (StringUtils.isNotBlank(labelKey)) {
+                    uniqueHashKey.append("_").append(labelKey).append("_").append(labels.get(labelKey));
+                }
+            }
+        }
+        return uniqueHashKey.toString();
+    }
 }

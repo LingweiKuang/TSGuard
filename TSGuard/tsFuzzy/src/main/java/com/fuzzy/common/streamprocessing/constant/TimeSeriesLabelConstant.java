@@ -1,15 +1,15 @@
-package com.fuzzy.prometheus.constant;
+package com.fuzzy.common.streamprocessing.constant;
 
-public enum PrometheusLabelConstant {
+public enum TimeSeriesLabelConstant {
     DATABASE("database"),
     DATABASE_INIT("databaseInit"),
     TABLE("table"),
     TIME_SERIES("timeSeries"),
-    METRIC("__name__");
+    METRIC_KEY("__name__");
 
-    private String label;
+    private final String label;
 
-    PrometheusLabelConstant(String label) {
+    TimeSeriesLabelConstant(String label) {
         this.label = label;
     }
 

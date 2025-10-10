@@ -56,9 +56,8 @@ public class PrometheusExpressionGenerator extends UntypedExpressionGenerator<Pr
 
     private enum Actions {
         COLUMN, LITERAL, UNARY_PREFIX_OPERATION,
-        BINARY_LOGICAL_OPERATOR, BINARY_COMPARISON_OPERATION,
-        //        BINARY_ARITHMETIC_OPERATION,
-        UNARY_NOT_PREFIX_OPERATION,
+        BINARY_LOGICAL_OPERATOR, BINARY_COMPARISON_OPERATION, BINARY_ARITHMETIC_OPERATION,
+//        UNARY_NOT_PREFIX_OPERATION,
 //        BETWEEN_OPERATOR(true), CAST_OPERATOR(false),
 //        BINARY_OPERATION(false), IN_OPERATION(true),
 //        UNARY_POSTFIX(true), COMPUTABLE_FUNCTION(false),
@@ -98,11 +97,11 @@ public class PrometheusExpressionGenerator extends UntypedExpressionGenerator<Pr
             case LITERAL:
                 expression = generateConstant();
                 break;
-            case UNARY_NOT_PREFIX_OPERATION:
-                PrometheusExpression subExpression = generateExpression(actions, depth + 1);
-                expression = new PrometheusUnaryNotPrefixOperation(subExpression,
-                        PrometheusUnaryNotPrefixOperation.PrometheusUnaryNotPrefixOperator.getRandom(subExpression));
-                break;
+//            case UNARY_NOT_PREFIX_OPERATION:
+//                PrometheusExpression subExpression = generateExpression(actions, depth + 1);
+//                expression = new PrometheusUnaryNotPrefixOperation(subExpression,
+//                        PrometheusUnaryNotPrefixOperation.PrometheusUnaryNotPrefixOperator.getRandom(subExpression));
+//                break;
             case UNARY_PREFIX_OPERATION:
                 expression = new PrometheusUnaryPrefixOperation(generateExpression(actions, depth + 1),
 //                        PrometheusUnaryPrefixOperator.getRandom()
@@ -156,13 +155,12 @@ public class PrometheusExpressionGenerator extends UntypedExpressionGenerator<Pr
 //                        generateExpression(actions, depth + 1),
 //                        PrometheusBinaryOperator.getRandom());
 //                break;
-//            case BINARY_ARITHMETIC_OPERATION:
-            // TODO 去除 BINARY_ARITHMETIC_OPERATION
-//                expression = new PrometheusBinaryArithmeticOperation(
-//                        generateExpression(actions, depth + 1),
-//                        generateExpression(actions, depth + 1),
-//                        PrometheusBinaryArithmeticOperator.getRandom());
-//                break;
+            case BINARY_ARITHMETIC_OPERATION:
+                expression = new PrometheusBinaryArithmeticOperation(
+                        generateExpression(actions, depth + 1),
+                        generateExpression(actions, depth + 1),
+                        PrometheusBinaryArithmeticOperation.PrometheusBinaryArithmeticOperator.getRandom());
+                break;
 //            case BETWEEN_OPERATOR:
 //                expression = new PrometheusBetweenOperation(generateExpression(actions, depth + 1),
 //                        generateExpression(actions, depth + 1),
@@ -272,8 +270,8 @@ public class PrometheusExpressionGenerator extends UntypedExpressionGenerator<Pr
         PrometheusDataType[] values;
         if (state.usesPQS()) {
             values = PrometheusDataType.valuesPQS();
-        } else if (state.usesTSAF()) {
-            values = PrometheusDataType.valuesTSAF();
+        } else if (state.usesTSAF() || state.usesStreamComputing()) {
+            values = PrometheusDataType.valuesTSAFOrStreamComputing();
         } else {
             values = PrometheusDataType.values();
         }
@@ -357,8 +355,8 @@ public class PrometheusExpressionGenerator extends UntypedExpressionGenerator<Pr
             // TSQS生成表达式时, rowVal默认值为1, 列存在因子时能够进行区分
             SamplingFrequency samplingFrequency = SamplingFrequencyManager.getInstance()
                     .getSamplingFrequencyFromCollection(state.getDatabaseName(), c.getTable().getName());
-            BigDecimal bigDecimal = EquationsManager.getInstance().getEquationsFromTimeSeries(state.getDatabaseName(),
-                            c.getTable().getName(), c.getName())
+            BigDecimal bigDecimal = EquationsManager.getInstance()
+                    .getEquationsFromTimeSeries(state.getDatabaseName(), c.getTable().getName(), c.getName())
                     .genValueByTimestamp(samplingFrequency, state.getOptions().getStartTimestampOfTSData());
             val = c.getType().isInt() ? PrometheusConstant.createIntConstant(bigDecimal.longValue()) :
                     PrometheusConstant.createBigDecimalConstant(bigDecimal);

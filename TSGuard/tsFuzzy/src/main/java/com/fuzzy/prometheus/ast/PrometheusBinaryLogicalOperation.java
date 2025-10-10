@@ -31,14 +31,13 @@ public class PrometheusBinaryLogicalOperation implements PrometheusExpression {
                 else return PrometheusConstant.createBoolean(left.asBooleanNotNull() || right.asBooleanNotNull());
             }
         },
-//        UNLESS("UNLESS") {
-//            @Override
-//            public PrometheusConstant apply(PrometheusConstant left, PrometheusConstant right) {
-//                // 矢量取补集
-//                return PrometheusConstant.createBoolean(true);
-//            }
-//        }
-        ;
+        UNLESS("UNLESS") {
+            @Override
+            public PrometheusConstant apply(PrometheusConstant left, PrometheusConstant right) {
+                // TODO 矢量取补集
+                return PrometheusConstant.createBoolean(true);
+            }
+        };
 
         private final String[] textRepresentations;
 

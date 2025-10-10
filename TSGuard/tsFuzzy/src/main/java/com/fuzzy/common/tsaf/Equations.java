@@ -17,7 +17,7 @@ import java.util.List;
 @Data
 @Slf4j
 public class Equations {
-
+    // 指定方程类型，可依据方程产出某时间戳下具体 value 值
     private final EquationType equationType;
     private List<BigDecimal> args;
 

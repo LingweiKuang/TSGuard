@@ -111,6 +111,10 @@ public class PrometheusToStringVisitor extends ToStringVisitor<PrometheusExpress
         visit(op.getLeft());
         sb.append(") ");
         sb.append(op.getOp().getTextRepresentation());
+
+        // comparisons between scalars must use BOOL modifier
+        if (op.getLeft().isScalarExpression() && op.getRight().isScalarExpression()) sb.append(" bool");
+
         sb.append(" (");
         visit(op.getRight());
         sb.append(")");

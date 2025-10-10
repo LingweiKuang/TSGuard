@@ -24,7 +24,6 @@ import java.util.Map;
 public class PrometheusInsertGenerator {
 
     private final PrometheusTable table;
-    private final StringBuilder sb = new StringBuilder();
     private final ExpectedErrors errors = new ExpectedErrors();
     private final PrometheusGlobalState globalState;
 
@@ -38,7 +37,8 @@ public class PrometheusInsertGenerator {
         this.table = table;
         String hashKey = generateHashKey(globalState.getDatabaseName(), table.getName());
         if (!isRandomlyGenerateTimestamp.containsKey(hashKey)) {
-            if (globalState.usesTSAF()) isRandomlyGenerateTimestamp.put(hashKey, false);
+            if (globalState.usesTSAF() || globalState.usesStreamComputing())
+                isRandomlyGenerateTimestamp.put(hashKey, false);
             else isRandomlyGenerateTimestamp.put(hashKey, Randomly.getBoolean());
             lastTimestamp.put(hashKey, globalState.getOptions().getStartTimestampOfTSData());
         }
@@ -57,7 +57,7 @@ public class PrometheusInsertGenerator {
         PrometheusInsertParam insertParam = new PrometheusInsertParam();
 
         // 产出 Prometheus 数据
-        if (globalState.usesTSAF()) {
+        if (globalState.usesTSAF() || globalState.usesStreamComputing()) {
             insertParam.setCollectorMap(generateInsertForTSAF());
         } else {
 
@@ -81,7 +81,8 @@ public class PrometheusInsertGenerator {
         // MetricName -> CollectorAttribute
         Map<String, CollectorAttribute> collectorMap = new HashMap<>();
 
-        for (PrometheusSchema.PrometheusColumn column : table.getRandomNonEmptyColumnSubset()) {
+        // 每列均需要按照采样间隔插入全部数据, 未插入数据点的地方通过空值进行标注
+        for (PrometheusSchema.PrometheusColumn column : table.getColumns()) {
             String columnName = column.getName();
             // random generate double val
             List<Double> doubles = new ArrayList<>();
@@ -102,7 +103,7 @@ public class PrometheusInsertGenerator {
             attribute.setDoubleValues(doubles);
             attribute.setTimestamps(timestamps);
             attribute.setHelp(String.format("%s.%s.%s", databaseName, tableName, columnName));
-            collectorMap.put(columnName, attribute);
+            collectorMap.put(attribute.getUniqueHashKey(), attribute);
         }
         return collectorMap;
     }
