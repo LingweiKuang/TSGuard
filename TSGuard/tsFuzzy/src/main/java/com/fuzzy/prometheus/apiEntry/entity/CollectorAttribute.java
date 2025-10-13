@@ -44,9 +44,9 @@ public class CollectorAttribute {
 //            case SUMMARY:
 //            default:
 //        }
-        // 初始化表时间: 测试区间左边界 startTimestamp - 100s
+        // 初始化表时间: 测试区间左边界 startTimestamp - 200s
         this.doubleValues = Collections.singletonList(0.0);
-        this.timestamps = Collections.singletonList(startTimestamp - 100 * 1000L);
+        this.timestamps = Collections.singletonList(startTimestamp - 200 * 1000L);
     }
 
     public void defaultValue(long startTimestamp) {
@@ -62,8 +62,8 @@ public class CollectorAttribute {
 //            default:
 //        }
         this.doubleValues = Collections.singletonList(0.0);
-        // 初始时间戳: startTimestamp - 200s
-        this.timestamps = Collections.singletonList(startTimestamp - 200 * 1000L);
+        // 初始时间戳: startTimestamp - 300s
+        this.timestamps = Collections.singletonList(startTimestamp - 300 * 1000L);
     }
 
     public Request createRequestForRemoteWrite() {

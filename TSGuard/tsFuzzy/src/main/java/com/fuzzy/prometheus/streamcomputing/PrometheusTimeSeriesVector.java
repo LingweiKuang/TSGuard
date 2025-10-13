@@ -7,13 +7,14 @@ import com.fuzzy.common.streamprocessing.entity.TimeSeriesStream;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class PrometheusTimeSeriesVector extends TimeSeriesStream.TimeSeriesVector implements TimeSeriesVectorOperation {
 
     // 封装语义不一致的操作运算(静态代理)
     public PrometheusTimeSeriesVector(TimeSeriesVector vector) {
-        super(vector.getName(), vector.getElements());
+        super(vector.getElements());
     }
 
     @Override
@@ -38,10 +39,11 @@ public class PrometheusTimeSeriesVector extends TimeSeriesStream.TimeSeriesVecto
                     }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
             // 存储保留后的数值
-            TimeSeriesElement reservedElement = new TimeSeriesElement(element.getLabelSets(), filteredValues);
+            TimeSeriesElement reservedElement = new TimeSeriesElement(element.getName(),
+                    element.getLabelSets(), filteredValues);
             reservedElements.put(hashKey, reservedElement);
         });
-        return new TimeSeriesVector(this.getName(), reservedElements);
+        return new TimeSeriesVector(reservedElements);
     }
 
     @Override
@@ -56,16 +58,33 @@ public class PrometheusTimeSeriesVector extends TimeSeriesStream.TimeSeriesVecto
                 reservedElements.put(hashKey, element);
             }
         });
-        // TODO metricName 的变化 => 暂时不考虑跨时间序列操作
-        return new TimeSeriesVector(this.getName(), reservedElements);
+        return new TimeSeriesVector(reservedElements);
     }
 
     @Override
     public TimeSeriesVector unless(TimeSeriesVector rightVector) {
-        // 筛除右侧标签匹配成功的元素值
-        Map<String, TimeSeriesElement> reservedElements = this.getElements().entrySet().stream().filter(
-                        entry -> !rightVector.getElements().containsKey(entry.getKey()))
+        // 左表达式筛除右表达式
+        Map<String, TimeSeriesElement> reservedElements = this.getElements().entrySet().stream().map(
+                        entry -> {
+                            // 右侧标签匹配不成功, 直接保留
+                            if (!rightVector.getElements().containsKey(entry.getKey())) return entry;
+
+                            // 右侧标签匹配成功, 按时间戳筛除
+                            TimeSeriesElement element = entry.getValue();
+                            TimeSeriesElement rightElement = rightVector.getElements().get(entry.getKey());
+                            Map<Long, BigDecimal> reservedValues = element.getValues().entrySet().stream()
+                                    .filter(timestampToValues ->
+                                            !rightElement.getValues().containsKey(timestampToValues.getKey()))
+                                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                            // 剔除空值元素
+                            if (reservedValues.isEmpty()) {
+                                return null;
+                            }
+                            return Map.entry(entry.getKey(),
+                                    new TimeSeriesElement(element.getName(), element.getLabelSets(), reservedValues));
+                        })
+                .filter(Objects::nonNull)
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        return new TimeSeriesVector(this.getName(), reservedElements);
+        return new TimeSeriesVector(reservedElements);
     }
 }

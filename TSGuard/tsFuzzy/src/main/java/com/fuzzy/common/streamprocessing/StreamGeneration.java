@@ -33,22 +33,19 @@ public class StreamGeneration {
         // 依据向量中时序不同(采样函数不一致), 生成对应采样值
         List<TimeSeriesElement> elements = new ArrayList<>();
         fetchColumnNames.forEach(columnName -> {
-            TimeSeriesElement element = new TimeSeriesElement();
-            element.setLabelSets(new HashMap<>() {{
-                put(TimeSeriesLabelConstant.TABLE.getLabel(), tableName);
-                put(TimeSeriesLabelConstant.TIME_SERIES.getLabel(), columnName);
-            }});
-
             Map<Long, BigDecimal> timestampToValueMap = new HashMap<>();
             Equations equation = EquationsManager.getInstance().getEquationsFromTimeSeries(databaseName, tableName, columnName);
             for (Long timestamp : timestamps) {
                 BigDecimal value = equation.genValueByTimestamp(samplingFrequency, timestamp);
                 timestampToValueMap.put(timestamp, value);
             }
-            element.setValues(timestampToValueMap);
-            elements.add(element);
+            // element
+            elements.add(new TimeSeriesElement(databaseName, new HashMap<>() {{
+                put(TimeSeriesLabelConstant.TABLE.getLabel(), tableName);
+                put(TimeSeriesLabelConstant.TIME_SERIES.getLabel(), columnName);
+            }}, timestampToValueMap));
         });
-        return new TimeSeriesStream.TimeSeriesVector(databaseName, elements);
+        return new TimeSeriesStream.TimeSeriesVector(elements);
     }
 
 }

@@ -3,7 +3,7 @@ package com.fuzzy.prometheus.ast;
 
 import com.fuzzy.IgnoreMeException;
 import com.fuzzy.Randomly;
-import com.fuzzy.common.tsaf.aggregation.DoubleArithmeticPrecisionConstant;
+import com.fuzzy.common.streamprocessing.entity.TimeSeriesStream;
 import com.fuzzy.prometheus.PrometheusSchema;
 import lombok.extern.slf4j.Slf4j;
 
@@ -23,28 +23,28 @@ public class PrometheusBinaryArithmeticOperation implements PrometheusExpression
             @Override
             public PrometheusConstant apply(PrometheusConstant left, PrometheusConstant right) {
                 return applyArithmeticOperation(left, right, (l, r) -> l.add(r)
-                        .setScale(DoubleArithmeticPrecisionConstant.scale, RoundingMode.HALF_UP));
+                        .setScale(TimeSeriesStream.ARITHMETIC_PRECISION, RoundingMode.HALF_UP));
             }
         },
         SUBTRACT("-") {
             @Override
             public PrometheusConstant apply(PrometheusConstant left, PrometheusConstant right) {
                 return applyArithmeticOperation(left, right, (l, r) -> l.subtract(r)
-                        .setScale(DoubleArithmeticPrecisionConstant.scale, RoundingMode.HALF_UP));
+                        .setScale(TimeSeriesStream.ARITHMETIC_PRECISION, RoundingMode.HALF_UP));
             }
         },
         MULTIPLY("*") {
             @Override
             public PrometheusConstant apply(PrometheusConstant left, PrometheusConstant right) {
                 return applyArithmeticOperation(left, right, (l, r) -> l.multiply(r)
-                        .setScale(DoubleArithmeticPrecisionConstant.scale, RoundingMode.HALF_UP));
+                        .setScale(TimeSeriesStream.ARITHMETIC_PRECISION, RoundingMode.HALF_UP));
             }
         },
         DIVIDE("/") {
             @Override
             public PrometheusConstant apply(PrometheusConstant left, PrometheusConstant right) {
                 return applyArithmeticOperation(left, right, (l, r) ->
-                        l.divide(r, DoubleArithmeticPrecisionConstant.scale, RoundingMode.HALF_UP));
+                        l.divide(r, TimeSeriesStream.ARITHMETIC_PRECISION, RoundingMode.HALF_UP));
             }
         },
         MODULO("%") {

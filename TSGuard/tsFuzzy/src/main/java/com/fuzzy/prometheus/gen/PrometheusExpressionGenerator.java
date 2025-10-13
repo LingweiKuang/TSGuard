@@ -275,10 +275,10 @@ public class PrometheusExpressionGenerator extends UntypedExpressionGenerator<Pr
         } else {
             values = PrometheusDataType.values();
         }
-        // TODO
+        // TODO 仅返回 -1000～1000值, 防止乘法范围溢出
         switch (Randomly.fromOptions(values)) {
             case GAUGE:
-                return PrometheusConstant.createIntConstant(state.getRandomly().getInteger());
+                return PrometheusConstant.createIntConstant(state.getRandomly().getInteger(-1000, 1000));
 //            case DOUBLE:
 //                double val = BigDecimal.valueOf((double) state.getRandomly().getInteger()
 //                        / state.getRandomly().getInteger()).setScale(

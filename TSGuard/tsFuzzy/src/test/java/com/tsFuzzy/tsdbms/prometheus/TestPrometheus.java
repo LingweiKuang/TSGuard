@@ -20,6 +20,23 @@ public class TestPrometheus {
     }
 
     @Test
+    public void testStreamComputing() {
+        // 测试数据时间范围：[cur - 3400, cur], unit: s
+
+        assertEquals(0,
+                Main.executeMain(new String[]{"--random-seed", "-1", "--timeout-seconds", TestConfig.SECONDS,
+                        "--num-threads", "1", "--host", "localhost", "--port", "9090", "--precision", "ms",
+                        "--log-syntax-error-query", "true", "--max-expression-depth", "4",
+                        "--log-execution-time", "false", "--num-tries", "10",
+//                        "--drop-database",
+                        "--params", "",
+                        "--use-syntax-validator", "--use-syntax-sequence",
+                        "--random-string-generation", "ALPHANUMERIC", "--database-prefix",
+                        "tsafdb", "--max-generated-databases", "1",
+                        "--num-queries", TestConfig.NUM_QUERIES, GlobalConstant.PROMETHEUS_DATABASE_NAME, "--oracle", "StreamComputing"}));
+    }
+
+    @Test
     public void testTSAF() {
         // 测试数据时间范围：[cur - 3400, cur], unit: s
         // TODO startTimestamp 需要随着测试的进行同步修正
@@ -37,7 +54,7 @@ public class TestPrometheus {
                         "--use-syntax-validator", "--use-syntax-sequence",
                         "--random-string-generation", "ALPHANUMERIC", "--database-prefix",
                         "tsafdb", "--max-generated-databases", "1",
-                        "--num-queries", TestConfig.NUM_QUERIES, GlobalConstant.PROMETHEUS_DATABASE_NAME, "--oracle", "StreamComputing"}));
+                        "--num-queries", TestConfig.NUM_QUERIES, GlobalConstant.PROMETHEUS_DATABASE_NAME, "--oracle", "TSAF"}));
     }
 
     // curl -X POST -g 'http://127.0.0.1:9090/api/v1/admin/tsdb/delete_series?match[]=tsafdbconnectiontest'

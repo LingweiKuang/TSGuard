@@ -89,10 +89,10 @@ public class PrometheusStreamComputingOracle
 //                PrometheusSchema.PrometheusDataType.TIMESTAMP), null));
         selectStatement.setFetchColumns(fetchColumns);
 
-        // TODO 时间范围全选
-        return new SQLQueryAdapter(new PrometheusQueryParam(PrometheusVisitor.asString(selectStatement),
-                System.currentTimeMillis() - 3600000L, System.currentTimeMillis())
-                .genPrometheusRequestParam(PrometheusRequestType.RANGE_QUERY), errors);
+        // TODO 时间范围全选 => 筛选范围
+        long queryStart = globalState.getOptions().getStartTimestampOfTSData() - 500 * 1000;
+        return new SQLQueryAdapter(new PrometheusQueryParam(PrometheusVisitor.asString(selectStatement), queryStart,
+                System.currentTimeMillis()).genPrometheusRequestParam(PrometheusRequestType.RANGE_QUERY), errors);
     }
 
     private PrometheusExpression generateExpression(List<PrometheusColumn> columns) {
@@ -173,15 +173,12 @@ public class PrometheusStreamComputingOracle
     @Override
     protected TimeSeriesStream getExpectedValues(PrometheusExpression expression) {
         String databaseName = globalState.getDatabaseName();
-        // TODO table name 和 columns 组合不上
         String tableName = table.getName();
         List<String> fetchColumnNames = columns.stream().map(AbstractTableColumn::getName).collect(Collectors.toList());
         // 表达式计算
-        TimeSeriesStream timeSeriesStream = PrometheusVisitor.streamComputeTimeSeriesVector(databaseName,
+        return PrometheusVisitor.streamComputeTimeSeriesVector(databaseName,
                 fetchColumnNames, globalState.getOptions().getStartTimestampOfTSData(), expression,
                 TableToNullValuesManager.getNullValues(databaseName, tableName));
-        log.info("{}", timeSeriesStream);
-        return timeSeriesStream;
     }
 
     @Override

@@ -1,6 +1,5 @@
 package com.fuzzy.common.streamprocessing.entity;
 
-import com.fuzzy.common.tsaf.aggregation.DoubleArithmeticPrecisionConstant;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
@@ -19,6 +18,8 @@ public abstract class TimeSeriesStream {
     public static final String SUBTRACT_OPERATION = "subtract";
     public static final String MULTIPLY_OPERATION = "multiply";
     public static final String DIVIDE_OPERATION = "divide";
+    public static final int COMPARISON_PRECISION = 13;
+    public static final int ARITHMETIC_PRECISION = 50;
     public static final BigDecimal NAN_BIGDECIMAL = new BigDecimal("9999999999998");
     public static final BigDecimal INF_BIGDECIMAL = new BigDecimal("9999999999999");
     public static final BigDecimal NEGATE_INF_BIGDECIMAL = new BigDecimal("-9999999999999");
@@ -32,39 +33,24 @@ public abstract class TimeSeriesStream {
     }
 
     public static class TimeSeriesVector extends TimeSeriesStream {
-        // TODO name 迁移至 TimeSeriesElement ?
-        // TODO 暂时不跨 metric name 进行数据比较
-
-        private String name;
         // <ElementMatchHashKey, TimeSeriesElement>
         private Map<String, TimeSeriesElement> elements = new HashMap<>();
 
         public TimeSeriesVector() {
-            this.name = "";
         }
 
-        public TimeSeriesVector(String name, List<TimeSeriesElement> elements) {
-            this.name = name;
+        public TimeSeriesVector(List<TimeSeriesElement> elements) {
             for (TimeSeriesElement element : elements) {
-                this.elements.put(element.getLabelSetsHashKey(name), element);
+                this.elements.put(element.getLabelSetsHashKey(), element);
             }
         }
 
-        public TimeSeriesVector(String name, Map<String, TimeSeriesElement> elements) {
-            this.name = name;
+        public TimeSeriesVector(Map<String, TimeSeriesElement> elements) {
             this.elements = elements;
-        }
-
-        public String getName() {
-            return this.name;
         }
 
         public Map<String, TimeSeriesElement> getElements() {
             return this.elements;
-        }
-
-        public void setName(String name) {
-            this.name = name;
         }
 
         public void setElements(Map<String, TimeSeriesElement> elements) {
@@ -81,12 +67,13 @@ public abstract class TimeSeriesStream {
             Map<String, TimeSeriesElement> updatedElements = this.elements.entrySet().stream()
                     .collect(Collectors.toMap(Map.Entry::getKey, entry -> {
                         // 将每个 element 中的 value 全部取反
-                        Map<Long, BigDecimal> updatedValues = entry.getValue().getValues().entrySet().stream()
+                        TimeSeriesElement element = entry.getValue();
+                        Map<Long, BigDecimal> updatedValues = element.getValues().entrySet().stream()
                                 .collect(Collectors.toMap(Map.Entry::getKey,
                                         timestampToValue -> timestampToValue.getValue().negate()));
-                        return new TimeSeriesElement(new HashMap<>(entry.getValue().getLabelSets()), updatedValues);
+                        return new TimeSeriesElement(element.getName(), new HashMap<>(element.getLabelSets()), updatedValues);
                     }));
-            return new TimeSeriesStream.TimeSeriesVector(this.name, updatedElements);
+            return new TimeSeriesStream.TimeSeriesVector(updatedElements);
         }
 
         /**
@@ -99,10 +86,9 @@ public abstract class TimeSeriesStream {
         public TimeSeriesStream arithmeticBinaryOperation(TimeSeriesStream other, BinaryOperator<BigDecimal> op, String operationType) {
             if (other instanceof TimeSeriesScalar scalar) {
                 // 针对每个 element 均执行二元运算操作
-                // TODO metric name 未删除
                 Map<String, TimeSeriesElement> updatedElements = this.getElements().entrySet().stream()
                         .collect(Collectors.toMap(entry -> {
-                            return entry.getValue().getLabelSetsHashKey("");
+                            return entry.getValue().getLabelSetsHashKey();
                         }, entry -> {
                             // 针对每个 element 内部的值元素进行 op 操作
                             Map<Long, BigDecimal> updatedValues = entry.getValue().getValues().entrySet().stream()
@@ -116,9 +102,10 @@ public abstract class TimeSeriesStream {
                                                 }
                                                 return op.apply(timestampToValues.getValue(), scalar.getScalarValue());
                                             }));
-                            return new TimeSeriesElement(new HashMap<>(entry.getValue().getLabelSets()), updatedValues);
+                            return new TimeSeriesElement("",
+                                    new HashMap<>(entry.getValue().getLabelSets()), updatedValues);
                         }));
-                return new TimeSeriesVector("", updatedElements);
+                return new TimeSeriesVector(updatedElements);
             } else if (other instanceof TimeSeriesVector rightTimeSeriesVector) {
                 // 保留左侧全部元素, 若右侧无法匹配 value 值, 则丢弃, 成功匹配则相互操作
                 Map<String, TimeSeriesElement> updatedElements = new HashMap<>();
@@ -144,10 +131,10 @@ public abstract class TimeSeriesStream {
                             }
                         }
                     });
-                    updatedElements.put(element.getLabelSetsHashKey(""),
-                            new TimeSeriesElement(new HashMap<>(element.getLabelSets()), streamComputeValues));
+                    updatedElements.put(element.getLabelSetsHashKey(),
+                            new TimeSeriesElement("", new HashMap<>(element.getLabelSets()), streamComputeValues));
                 });
-                return new TimeSeriesVector("", updatedElements);
+                return new TimeSeriesVector(updatedElements);
             } else {
                 throw new UnsupportedOperationException("Unsupported stream type");
             }
@@ -166,7 +153,8 @@ public abstract class TimeSeriesStream {
                 Map<String, TimeSeriesElement> updatedElements = this.getElements().entrySet().stream()
                         .map(entry -> {
                             // 针对每个 element 内部的值元素进行 op 操作 => 满足条件保留
-                            Map<Long, BigDecimal> updatedValues = entry.getValue().getValues().entrySet().stream()
+                            TimeSeriesElement element = entry.getValue();
+                            Map<Long, BigDecimal> updatedValues = element.getValues().entrySet().stream()
                                     .filter(timestampToValues -> {
                                         BigDecimal apply = op.apply(timestampToValues.getValue(), scalar.getScalarValue());
                                         return apply.compareTo(BigDecimal.ONE) == 0;
@@ -177,12 +165,12 @@ public abstract class TimeSeriesStream {
                                 return null;
                             }
 
-                            return Map.entry(entry.getKey(),
-                                    new TimeSeriesElement(new HashMap<>(entry.getValue().getLabelSets()), updatedValues));
+                            return Map.entry(entry.getKey(), new TimeSeriesElement(element.getName(),
+                                    new HashMap<>(element.getLabelSets()), updatedValues));
                         })
                         .filter(Objects::nonNull)
                         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-                return new TimeSeriesVector(this.name, updatedElements);
+                return new TimeSeriesVector(updatedElements);
             } else if (other instanceof TimeSeriesVector rightTimeSeriesVector) {
                 // 保留左侧全部元素, 若右侧无法匹配 value 值, 则丢弃, 成功匹配则相互操作
                 Map<String, TimeSeriesElement> updatedElements = new HashMap<>();
@@ -207,11 +195,11 @@ public abstract class TimeSeriesStream {
 
                     // 存在计算值
                     if (!streamComputeValues.isEmpty()) {
-                        updatedElements.put(hashKey,
-                                new TimeSeriesElement(new HashMap<>(element.getLabelSets()), streamComputeValues));
+                        updatedElements.put(hashKey, new TimeSeriesElement(element.getName(),
+                                new HashMap<>(element.getLabelSets()), streamComputeValues));
                     }
                 });
-                return new TimeSeriesVector(this.name, updatedElements);
+                return new TimeSeriesVector(updatedElements);
             } else {
                 throw new UnsupportedOperationException("Unsupported stream type");
             }
@@ -230,17 +218,16 @@ public abstract class TimeSeriesStream {
             } else if (expectedResultSet instanceof TimeSeriesScalar scalar) {
                 // 真实结果集为向量, 预期结果集为标量
                 // metric 和 label 均为空, 且值内包含标量元素
-                return "".equals(this.getName()) && this.getElements().size() == 1 && this.getElements().containsKey("")
+                return this.getElements().size() == 1 && this.getElements().containsKey("")
                         && this.getElements().get("").containsScalarValue(scalar.getScalarValue());
             } else if (expectedResultSet instanceof TimeSeriesVector vector) {
-                // 值相同, 时间序列数目相同
-                boolean res;
-                if (this.elements.size() == vector.getElements().size() && this.elements.isEmpty()) {
-                    res = true;
-                } else {
-                    // TODO 暂时忽略 this.name 的影响
-                    res = this.name.equals(vector.getName()) && this.elements.size() == vector.getElements().size();
+                // 时间序列数目相同
+                if (this.elements.size() != vector.getElements().size()) {
+                    log.error("this.elements:{} vector.elements:{} this.size:{} vector.size:{}", this.elements.keySet(),
+                            vector.getElements().keySet(), this.elements.size(), vector.getElements().size());
+                    return false;
                 }
+                boolean res = true;
                 for (String elementHashKey : vector.getElements().keySet()) {
                     if (!this.elements.containsKey(elementHashKey)) {
                         log.error("真实时间序列不包含预期时间序列, expected time series: {}", elementHashKey);
@@ -311,7 +298,7 @@ public abstract class TimeSeriesStream {
                 Map<String, TimeSeriesElement> updatedElements = timeSeriesVector.getElements().entrySet().stream()
                         .collect(Collectors.toMap(entry -> {
                             // 二元算数运算剔除 metric name
-                            return entry.getValue().getLabelSetsHashKey("");
+                            return entry.getValue().getLabelSetsHashKey();
                         }, entry -> {
                             // 针对每个 element 内部的值元素进行 op 操作
                             Map<Long, BigDecimal> updatedValues = entry.getValue().getValues().entrySet().stream()
@@ -325,9 +312,9 @@ public abstract class TimeSeriesStream {
                                                 }
                                                 return op.apply(this.scalarValue, timestampToValues.getValue());
                                             }));
-                            return new TimeSeriesElement(new HashMap<>(entry.getValue().getLabelSets()), updatedValues);
+                            return new TimeSeriesElement("", new HashMap<>(entry.getValue().getLabelSets()), updatedValues);
                         }));
-                return new TimeSeriesVector("", updatedElements);
+                return new TimeSeriesVector(updatedElements);
             } else {
                 throw new UnsupportedOperationException("Unsupported stream type");
             }
@@ -348,7 +335,8 @@ public abstract class TimeSeriesStream {
                 Map<String, TimeSeriesElement> updatedElements = timeSeriesVector.getElements().entrySet().stream()
                         .map(entry -> {
                             // 针对每个 entry 内部的值元素进行 op 操作 => 满足条件保留
-                            Map<Long, BigDecimal> updatedValues = entry.getValue().getValues().entrySet().stream()
+                            TimeSeriesElement element = entry.getValue();
+                            Map<Long, BigDecimal> updatedValues = element.getValues().entrySet().stream()
                                     .filter(timestampToValues -> {
                                         BigDecimal apply = op.apply(this.scalarValue, timestampToValues.getValue());
                                         return apply.compareTo(BigDecimal.ONE) == 0;
@@ -358,12 +346,12 @@ public abstract class TimeSeriesStream {
                                 return null;
                             }
 
-                            return Map.entry(entry.getKey(),
-                                    new TimeSeriesElement(new HashMap<>(entry.getValue().getLabelSets()), updatedValues));
+                            return Map.entry(entry.getKey(), new TimeSeriesElement(element.getName(),
+                                    new HashMap<>(element.getLabelSets()), updatedValues));
                         })
                         .filter(Objects::nonNull)
                         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-                return new TimeSeriesVector(timeSeriesVector.getName(), updatedElements);
+                return new TimeSeriesVector(updatedElements);
             } else {
                 throw new UnsupportedOperationException("Unsupported stream type");
             }
@@ -377,16 +365,17 @@ public abstract class TimeSeriesStream {
          */
         @Override
         public boolean containsAndEquals(TimeSeriesStream expectedResultSet) {
-            // TODO 应该不存在解析值为标量的情况
-            if (expectedResultSet == null) {
-                return this.scalarValue == null;
-            } else if (expectedResultSet instanceof TimeSeriesStream.TimeSeriesScalar scalar) {
-                return this.scalarValue.compareTo(scalar.getScalarValue()) == 0;
-            } else if (expectedResultSet instanceof TimeSeriesStream.TimeSeriesVector timeSeriesVector) {
-                return false;
-            } else {
-                throw new UnsupportedOperationException("Unsupported stream type");
-            }
+            // TODO 应该不存在解析值为标量的情况, 所有更新暂时忽略该函数
+            throw new UnsupportedOperationException("Unsupported stream type: left expression is scalar");
+//            if (expectedResultSet == null) {
+//                return this.scalarValue == null;
+//            } else if (expectedResultSet instanceof TimeSeriesStream.TimeSeriesScalar scalar) {
+//                return this.scalarValue.compareTo(scalar.getScalarValue()) == 0;
+//            } else if (expectedResultSet instanceof TimeSeriesStream.TimeSeriesVector timeSeriesVector) {
+//                return false;
+//            } else {
+//                throw new UnsupportedOperationException("Unsupported stream type");
+//            }
         }
 
         @Override
@@ -418,7 +407,7 @@ public abstract class TimeSeriesStream {
 
     public TimeSeriesStream divide(TimeSeriesStream other) {
         return arithmeticBinaryOperation(other, (l, r) ->
-                l.divide(r, DoubleArithmeticPrecisionConstant.scale, RoundingMode.HALF_UP), DIVIDE_OPERATION);
+                l.divide(r, TimeSeriesStream.ARITHMETIC_PRECISION, RoundingMode.HALF_UP), DIVIDE_OPERATION);
     }
 
     public TimeSeriesStream equal(TimeSeriesStream other) {

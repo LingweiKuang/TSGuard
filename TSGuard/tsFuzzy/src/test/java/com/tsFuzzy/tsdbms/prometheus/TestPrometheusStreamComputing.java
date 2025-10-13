@@ -6,6 +6,8 @@ import com.fuzzy.prometheus.streamcomputing.PrometheusTimeSeriesVector;
 import org.junit.Test;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.util.HashMap;
 
 public class TestPrometheusStreamComputing {
@@ -31,13 +33,13 @@ public class TestPrometheusStreamComputing {
         TimeSeriesStream.TimeSeriesScalar scalar = new TimeSeriesStream.TimeSeriesScalar(BigDecimal.ONE);
         Long timestamp = 1L;
         Long timestamp2 = 2L;
-        String hashKey = "_";
-        TimeSeriesElement element = new TimeSeriesElement(new HashMap<>(), new HashMap<>() {{
+        String hashKey = "";
+        TimeSeriesElement element = new TimeSeriesElement(hashKey, new HashMap<>(), new HashMap<>() {{
             this.put(timestamp, BigDecimal.TEN);
             this.put(timestamp2, BigDecimal.ZERO);
         }});
-        TimeSeriesStream.TimeSeriesVector vector = new TimeSeriesStream.TimeSeriesVector(hashKey, new HashMap<>() {{
-            this.put(element.getLabelSetsHashKey(hashKey), element);
+        TimeSeriesStream.TimeSeriesVector vector = new TimeSeriesStream.TimeSeriesVector(new HashMap<>() {{
+            this.put(element.getLabelSetsHashKey(), element);
         }});
 
         assert ((TimeSeriesStream.TimeSeriesVector) scalar.add(vector)).getElements().get(hashKey).getValues().get(timestamp).compareTo(BigDecimal.valueOf(11)) == 0;
@@ -51,22 +53,22 @@ public class TestPrometheusStreamComputing {
     public void testVectorArithmeticOpVector() {
         Long timestamp = 1L;
         Long timestamp2 = 2L;
-        String hashKey = "_";
+        String hashKey = "";
 
-        TimeSeriesElement element = new TimeSeriesElement(new HashMap<>(), new HashMap<>() {{
+        TimeSeriesElement element = new TimeSeriesElement(hashKey, new HashMap<>(), new HashMap<>() {{
             this.put(timestamp, BigDecimal.ONE);
             this.put(timestamp2, BigDecimal.ONE);
         }});
-        TimeSeriesStream.TimeSeriesVector vector = new TimeSeriesStream.TimeSeriesVector(hashKey, new HashMap<>() {{
-            this.put(element.getLabelSetsHashKey(hashKey), element);
+        TimeSeriesStream.TimeSeriesVector vector = new TimeSeriesStream.TimeSeriesVector(new HashMap<>() {{
+            this.put(element.getLabelSetsHashKey(), element);
         }});
 
-        TimeSeriesElement element2 = new TimeSeriesElement(new HashMap<>(), new HashMap<>() {{
+        TimeSeriesElement element2 = new TimeSeriesElement(hashKey, new HashMap<>(), new HashMap<>() {{
             this.put(timestamp, BigDecimal.TEN);
             this.put(timestamp2, BigDecimal.ZERO);
         }});
-        TimeSeriesStream.TimeSeriesVector vector2 = new TimeSeriesStream.TimeSeriesVector(hashKey, new HashMap<>() {{
-            this.put(element2.getLabelSetsHashKey(hashKey), element2);
+        TimeSeriesStream.TimeSeriesVector vector2 = new TimeSeriesStream.TimeSeriesVector(new HashMap<>() {{
+            this.put(element2.getLabelSetsHashKey(), element2);
         }});
 
         assert ((TimeSeriesStream.TimeSeriesVector) vector.add(vector2)).getElements().get(hashKey).getValues().get(timestamp).compareTo(BigDecimal.valueOf(11)) == 0;
@@ -96,18 +98,18 @@ public class TestPrometheusStreamComputing {
     public void testScalarComparisonOpVector() {
         TimeSeriesStream.TimeSeriesScalar scalar = new TimeSeriesStream.TimeSeriesScalar(BigDecimal.ONE);
         Long timestamp = 1L;
-        String hashKey = "_";
-        TimeSeriesElement element = new TimeSeriesElement(new HashMap<>(), new HashMap<>() {{
+        String hashKey = "";
+        TimeSeriesElement element = new TimeSeriesElement(hashKey, new HashMap<>(), new HashMap<>() {{
             this.put(timestamp, BigDecimal.TEN);
         }});
-        TimeSeriesStream.TimeSeriesVector vector = new TimeSeriesStream.TimeSeriesVector(hashKey, new HashMap<>() {{
-            this.put(element.getLabelSetsHashKey(hashKey), element);
+        TimeSeriesStream.TimeSeriesVector vector = new TimeSeriesStream.TimeSeriesVector(new HashMap<>() {{
+            this.put(element.getLabelSetsHashKey(), element);
         }});
 
-        assert ((TimeSeriesStream.TimeSeriesVector) scalar.equal(vector)).getElements().get(hashKey).getValues().isEmpty();
+        assert ((TimeSeriesStream.TimeSeriesVector) scalar.equal(vector)).getElements().isEmpty();
         assert ((TimeSeriesStream.TimeSeriesVector) scalar.notEqual(vector)).getElements().get(hashKey).getValues().get(timestamp).compareTo(BigDecimal.TEN) == 0;
-        assert ((TimeSeriesStream.TimeSeriesVector) scalar.greaterThan(vector)).getElements().get(hashKey).getValues().isEmpty();
-        assert ((TimeSeriesStream.TimeSeriesVector) scalar.greaterOrEqual(vector)).getElements().get(hashKey).getValues().isEmpty();
+        assert ((TimeSeriesStream.TimeSeriesVector) scalar.greaterThan(vector)).getElements().isEmpty();
+        assert ((TimeSeriesStream.TimeSeriesVector) scalar.greaterOrEqual(vector)).getElements().isEmpty();
         assert ((TimeSeriesStream.TimeSeriesVector) scalar.lessThan(vector)).getElements().get(hashKey).getValues().get(timestamp).compareTo(BigDecimal.TEN) == 0;
         assert ((TimeSeriesStream.TimeSeriesVector) scalar.lessOrEqual(vector)).getElements().get(hashKey).getValues().get(timestamp).compareTo(BigDecimal.TEN) == 0;
     }
@@ -115,26 +117,26 @@ public class TestPrometheusStreamComputing {
     @Test
     public void testVectorComparisonOpVector() {
         Long timestamp = 1L;
-        String hashKey = "_";
+        String hashKey = "";
 
-        TimeSeriesElement element = new TimeSeriesElement(new HashMap<>(), new HashMap<>() {{
+        TimeSeriesElement element = new TimeSeriesElement(hashKey, new HashMap<>(), new HashMap<>() {{
             this.put(timestamp, BigDecimal.ONE);
         }});
-        TimeSeriesStream.TimeSeriesVector vector = new TimeSeriesStream.TimeSeriesVector(hashKey, new HashMap<>() {{
-            this.put(element.getLabelSetsHashKey(hashKey), element);
+        TimeSeriesStream.TimeSeriesVector vector = new TimeSeriesStream.TimeSeriesVector(new HashMap<>() {{
+            this.put(element.getLabelSetsHashKey(), element);
         }});
 
-        TimeSeriesElement element2 = new TimeSeriesElement(new HashMap<>(), new HashMap<>() {{
+        TimeSeriesElement element2 = new TimeSeriesElement(hashKey, new HashMap<>(), new HashMap<>() {{
             this.put(timestamp, BigDecimal.TEN);
         }});
-        TimeSeriesStream.TimeSeriesVector vector2 = new TimeSeriesStream.TimeSeriesVector(hashKey, new HashMap<>() {{
-            this.put(element2.getLabelSetsHashKey(hashKey), element2);
+        TimeSeriesStream.TimeSeriesVector vector2 = new TimeSeriesStream.TimeSeriesVector(new HashMap<>() {{
+            this.put(element2.getLabelSetsHashKey(), element2);
         }});
 
-        assert ((TimeSeriesStream.TimeSeriesVector) vector.equal(vector2)).getElements().get(hashKey).getValues().isEmpty();
+        assert ((TimeSeriesStream.TimeSeriesVector) vector.equal(vector2)).getElements().isEmpty();
         assert ((TimeSeriesStream.TimeSeriesVector) vector.notEqual(vector2)).getElements().get(hashKey).getValues().get(timestamp).compareTo(BigDecimal.ONE) == 0;
-        assert ((TimeSeriesStream.TimeSeriesVector) vector.greaterThan(vector2)).getElements().get(hashKey).getValues().isEmpty();
-        assert ((TimeSeriesStream.TimeSeriesVector) vector.greaterOrEqual(vector2)).getElements().get(hashKey).getValues().isEmpty();
+        assert ((TimeSeriesStream.TimeSeriesVector) vector.greaterThan(vector2)).getElements().isEmpty();
+        assert ((TimeSeriesStream.TimeSeriesVector) vector.greaterOrEqual(vector2)).getElements().isEmpty();
         assert ((TimeSeriesStream.TimeSeriesVector) vector.lessThan(vector2)).getElements().get(hashKey).getValues().get(timestamp).compareTo(BigDecimal.ONE) == 0;
         assert ((TimeSeriesStream.TimeSeriesVector) vector.lessOrEqual(vector2)).getElements().get(hashKey).getValues().get(timestamp).compareTo(BigDecimal.ONE) == 0;
     }
@@ -142,18 +144,35 @@ public class TestPrometheusStreamComputing {
     @Test
     public void testVectorComparisonOpDouble() {
         Long timestamp = 1L;
-        String hashKey = "_";
+        String hashKey = "";
 
-        TimeSeriesElement element = new TimeSeriesElement(new HashMap<>(), new HashMap<>() {{
+        TimeSeriesElement element = new TimeSeriesElement(hashKey, new HashMap<>(), new HashMap<>() {{
             this.put(timestamp, BigDecimal.ONE);
         }});
-        TimeSeriesStream.TimeSeriesVector vector = new TimeSeriesStream.TimeSeriesVector(hashKey, new HashMap<>() {{
-            this.put(element.getLabelSetsHashKey(hashKey), element);
+        TimeSeriesStream.TimeSeriesVector vector = new TimeSeriesStream.TimeSeriesVector(new HashMap<>() {{
+            this.put(element.getLabelSetsHashKey(), element);
         }});
 
         TimeSeriesStream stream = new PrometheusTimeSeriesVector(vector);
         PrometheusTimeSeriesVector trans = (PrometheusTimeSeriesVector) stream;
         System.out.println(trans);
         System.out.println(trans.isVector());
+    }
+
+    @Test
+    public void testVectorComparisonOpDoubleVector() {
+        BigDecimal a = new BigDecimal("1180976132.000000000000000");
+        BigDecimal b = new BigDecimal("1180976132");
+        MathContext mc = new MathContext(12); // 保留 12 位有效数字
+        BigDecimal aRounded = a.round(mc);
+        BigDecimal bRounded = b.round(mc);
+        System.out.println(aRounded);
+        System.out.println(bRounded);
+        System.out.println(aRounded.compareTo(bRounded) == 0);
+
+        BigDecimal c = new BigDecimal("84");
+        BigDecimal d = new BigDecimal("-1721638059");
+        // -4.879074295603731E-8
+        System.out.println(c.divide(d, 25, RoundingMode.HALF_UP));
     }
 }

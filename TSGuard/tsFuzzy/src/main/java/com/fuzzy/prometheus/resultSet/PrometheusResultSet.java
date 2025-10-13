@@ -164,10 +164,8 @@ public class PrometheusResultSet extends DBValResultSet {
             }};
 
             // element
-            TimeSeriesElement timeSeriesElement = new TimeSeriesElement(labelSets, timestampToValues);
-            timeSeriesVector.getElements().put(timeSeriesElement.getLabelSetsHashKey(metricName), timeSeriesElement);
-            // TODO name 暂时取最后一个时间序列, 暂时不考虑跨 metric name 进行数值比较
-            timeSeriesVector.setName(metricName);
+            TimeSeriesElement timeSeriesElement = new TimeSeriesElement(metricName, labelSets, timestampToValues);
+            timeSeriesVector.getElements().put(timeSeriesElement.getLabelSetsHashKey(), timeSeriesElement);
         }
 
         return timeSeriesVector;

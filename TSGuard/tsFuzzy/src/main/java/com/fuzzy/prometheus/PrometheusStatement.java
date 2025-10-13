@@ -4,10 +4,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.benchmark.commonClass.TSFuzzyStatement;
 import com.benchmark.entity.DBValResultSet;
 import com.benchmark.util.HttpClientUtils;
-import com.fuzzy.prometheus.apiEntry.PrometheusApiEntry;
-import com.fuzzy.prometheus.apiEntry.PrometheusInsertParam;
-import com.fuzzy.prometheus.apiEntry.PrometheusQueryParam;
-import com.fuzzy.prometheus.apiEntry.PrometheusRequestParam;
+import com.fuzzy.prometheus.apiEntry.*;
 import com.fuzzy.prometheus.apiEntry.entity.CollectorAttribute;
 import com.fuzzy.prometheus.client.builder.*;
 import com.fuzzy.prometheus.client.builder.pushGateway.PushGatewaySeriesDeleteBuilder;
@@ -47,23 +44,26 @@ public class PrometheusStatement implements TSFuzzyStatement {
                     insertByRemoteWrite(requestParam.getBody());
                     break;
                 case SERIES_DELETE:
-                    PrometheusQueryParam seriesDeleteParam = JSONObject.parseObject(requestParam.getBody(),
-                            PrometheusQueryParam.class);
+                    PrometheusDeleteParam deleteParam = JSONObject.parseObject(requestParam.getBody(),
+                            PrometheusDeleteParam.class);
                     SeriesDeleteBuilder deleteBuilder =
                             QueryBuilderType.SeriesDelete.newInstance(apiEntry.getTargetServer());
-                    URI targetUri = deleteBuilder.withSelector(seriesDeleteParam.getRequestBody()).build();
+                    URI targetUri = deleteBuilder.withSelector(deleteParam.getSelector())
+                            .withStartEpochTime(deleteParam.getRcf3339Start())
+                            .withEndEpochTime(deleteParam.getRcf3339End()).build();
+                    log.info("targetUri: {}", targetUri);
                     this.apiEntry.executePostRequest(targetUri);
                     CleanTombstonesBuilder cleanTombstonesBuilder =
                             QueryBuilderType.CleanTombstones.newInstance(apiEntry.getTargetServer());
                     this.apiEntry.executePostRequest(cleanTombstonesBuilder.build());
                     break;
                 case PUSH_GATEWAY_SERIES_DELETE:
-                    PrometheusQueryParam deleteParam = JSONObject.parseObject(requestParam.getBody(),
+                    PrometheusQueryParam pushGatewayDeleteParam = JSONObject.parseObject(requestParam.getBody(),
                             PrometheusQueryParam.class);
                     PushGatewaySeriesDeleteBuilder pushGatewaySeriesDeleteBuilder =
                             QueryBuilderType.PushGatewaySeriesDelete.newInstance(apiEntry.getPushGatewayServer());
                     this.apiEntry.executeDeleteRequest(pushGatewaySeriesDeleteBuilder
-                            .withJobName(deleteParam.getRequestBody()).build());
+                            .withJobName(pushGatewayDeleteParam.getRequestBody()).build());
                     break;
                 default:
                     throw new IllegalArgumentException(String.format("查询参数类型不存在, type:%s",

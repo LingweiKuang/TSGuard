@@ -566,6 +566,13 @@ public final class Main {
 
         for (int i = 0; i < options.getTotalNumberTries(); i++) {
             String databaseName = generateNameForDatabase(jc.getParsedCommand(), options.getDatabasePrefix(), i);
+            // 测试数据时间范围：[cur - 3400, cur], unit: s
+            // startTimestamp 需要随着测试的进行同步修正 -> remote write 仅支持插入 1h 内数据
+            if (jc.getParsedCommand().equals(GlobalConstant.PROMETHEUS_DATABASE_NAME)) {
+                long curTimestamp = System.currentTimeMillis() / 1000;
+                long startTimestamp = curTimestamp - 3000;
+                options.setStartTimestampOfTSData(startTimestamp);
+            }
 
             final long seed;
             if (options.getRandomSeed() == -1) {
@@ -691,10 +698,12 @@ public final class Main {
 
         // query syntax sequence
         sb.append(InfluxDBQuerySynthesisFeedbackManager.querySynthesisFeedback.toString()).append("\n");
-        try (FileWriter writer = new FileWriter("E:\\work project\\t3-tsms\\tsFuzzy\\logs\\statistic.info")) {
+        String projectDir = System.getProperty("user.dir");
+        String filePath = projectDir + "/logs/statistics.log";
+        try (FileWriter writer = new FileWriter(filePath)) {
             writer.write(sb.toString());
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("write to log file error! e:", e);
         }
 
         return someOneFails.get() ? options.getErrorExitCode() : 0;

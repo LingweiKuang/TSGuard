@@ -9,6 +9,7 @@ import com.fuzzy.common.query.SQLQueryProvider;
 import com.fuzzy.prometheus.apiEntry.PrometheusQueryParam;
 import com.fuzzy.prometheus.apiEntry.PrometheusRequestType;
 import com.fuzzy.prometheus.gen.PrometheusDatabaseGenerator;
+import com.fuzzy.prometheus.gen.PrometheusDeleteSeriesGenerator;
 import com.fuzzy.prometheus.gen.PrometheusInsertGenerator;
 import com.fuzzy.prometheus.gen.PrometheusTableGenerator;
 import com.google.auto.service.AutoService;
@@ -24,6 +25,7 @@ public class PrometheusProvider extends SQLProviderAdapter<PrometheusGlobalState
 
     enum Action implements AbstractAction<PrometheusGlobalState> {
         INSERT(PrometheusInsertGenerator::insertRow),
+        DELETE_SERIES_INIT_VAL(PrometheusDeleteSeriesGenerator::generate),
         CREATE_TABLE((g) -> {
             String tableName = DBMSCommon.createTableName(g.getSchema().getMaxTableIndex() + 1);
             return PrometheusTableGenerator.generate(g, tableName);
@@ -50,6 +52,9 @@ public class PrometheusProvider extends SQLProviderAdapter<PrometheusGlobalState
                 break;
             case INSERT:
                 nrPerformed = r.getInteger(3, globalState.getOptions().getMaxNumberInserts());
+                break;
+            case DELETE_SERIES_INIT_VAL:
+                nrPerformed = r.getInteger(1, 2);
                 break;
             default:
                 throw new AssertionError(a);

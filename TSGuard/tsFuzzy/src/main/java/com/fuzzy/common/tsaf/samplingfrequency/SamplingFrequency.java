@@ -81,6 +81,19 @@ public class SamplingFrequency {
         return results;
     }
 
+    /**
+     * 找到采样范围内最左侧采样时间戳 => 非均匀分布情况, 用于 Prometheus
+     *
+     * @param startTimestamp
+     * @param endTimestamp
+     * @return
+     */
+    public Long genStartSamplingTimestamp(long startTimestamp, long endTimestamp) {
+        assert (endTimestamp - startTimestamp) % samplingPeriod == 0;
+        return type.apply(new Random(seed), startTimestamp, startTimestamp + samplingPeriod,
+                samplingPeriod, samplingNumber).stream().min(Long::compare).orElse(startTimestamp);
+    }
+
     public BigDecimal getSeqByTimestamp(long timestamp) {
         // 取值范围 [1, ∞)
         BigDecimal seq = binarySearchTimestamp(timestamp);
