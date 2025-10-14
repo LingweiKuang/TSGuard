@@ -165,7 +165,13 @@ public class PrometheusResultSet extends DBValResultSet {
 
             // element
             TimeSeriesElement timeSeriesElement = new TimeSeriesElement(metricName, labelSets, timestampToValues);
-            timeSeriesVector.getElements().put(timeSeriesElement.getLabelSetsHashKey(), timeSeriesElement);
+            // OR 运算符产生多条 metrics 时间序列的情况 => 一个时间戳上具备多个 val, 忽略 metric name, 将集合合并比较
+            if (timeSeriesVector.getElements().containsKey(timeSeriesElement.getLabelSetsHashKey())) {
+                timeSeriesVector.getElements().get(timeSeriesElement.getLabelSetsHashKey()).getValues().putAll(timestampToValues);
+            } else {
+                timeSeriesVector.getElements().put(timeSeriesElement.getLabelSetsHashKey(), timeSeriesElement);
+            }
+
         }
 
         return timeSeriesVector;

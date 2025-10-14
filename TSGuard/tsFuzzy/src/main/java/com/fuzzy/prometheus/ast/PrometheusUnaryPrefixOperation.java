@@ -48,6 +48,13 @@ public class PrometheusUnaryPrefixOperation extends UnaryOperatorNode<Prometheus
         public String getTextRepresentation() {
             return Randomly.fromOptions(textRepresentations);
         }
+
+        public static PrometheusUnaryPrefixOperator getPrometheusUnaryPrefixOperator(String textRepresentation) {
+            for (PrometheusUnaryPrefixOperator value : PrometheusUnaryPrefixOperator.values()) {
+                if (value.getTextRepresentation().equals(textRepresentation)) return value;
+            }
+            throw new IllegalArgumentException("Invalid unary prefix operator: " + textRepresentation);
+        }
     }
 
     public PrometheusUnaryPrefixOperation(PrometheusExpression expr, PrometheusUnaryPrefixOperator op) {

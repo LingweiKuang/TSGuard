@@ -28,6 +28,15 @@ public class SamplingFrequency {
         this.type = Randomly.fromOptions(SamplingFrequencyType.values());
     }
 
+    public SamplingFrequency(int seed, Long startTimestamp, Long samplingPeriod, Long samplingNumber,
+                             SamplingFrequencyType samplingFrequencyType) {
+        this.seed = seed;
+        this.startTimestamp = startTimestamp;
+        this.samplingPeriod = samplingPeriod;
+        this.samplingNumber = samplingNumber;
+        this.type = samplingFrequencyType;
+    }
+
     public enum SamplingFrequencyType {
         UNIFORM_DISTRIBUTION {
             @Override

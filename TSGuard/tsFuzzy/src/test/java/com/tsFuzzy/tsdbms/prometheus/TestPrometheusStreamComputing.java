@@ -2,13 +2,24 @@ package com.tsFuzzy.tsdbms.prometheus;
 
 import com.fuzzy.common.streamprocessing.entity.TimeSeriesElement;
 import com.fuzzy.common.streamprocessing.entity.TimeSeriesStream;
+import com.fuzzy.common.tsaf.EquationsManager;
+import com.fuzzy.common.tsaf.TSAFDataType;
+import com.fuzzy.common.tsaf.samplingfrequency.SamplingFrequency;
+import com.fuzzy.common.tsaf.samplingfrequency.SamplingFrequencyManager;
+import com.fuzzy.prometheus.PrometheusVisitor;
+import com.fuzzy.prometheus.ast.PrometheusExpression;
+import com.fuzzy.prometheus.gen.PrometheusInsertGenerator;
+import com.fuzzy.prometheus.gen.PrometheusTableGenerator;
 import com.fuzzy.prometheus.streamcomputing.PrometheusTimeSeriesVector;
+import com.fuzzy.prometheus.streamcomputing.parser.PrometheusLexer;
+import com.fuzzy.prometheus.streamcomputing.parser.PrometheusParser;
 import org.junit.Test;
 
 import java.math.BigDecimal;
-import java.math.MathContext;
-import java.math.RoundingMode;
 import java.util.HashMap;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class TestPrometheusStreamComputing {
 
@@ -76,6 +87,25 @@ public class TestPrometheusStreamComputing {
         assert ((TimeSeriesStream.TimeSeriesVector) vector.multiply(vector2)).getElements().get(hashKey).getValues().get(timestamp).compareTo(BigDecimal.TEN) == 0;
         assert ((TimeSeriesStream.TimeSeriesVector) vector.divide(vector2)).getElements().get(hashKey).getValues().get(timestamp).compareTo(BigDecimal.valueOf(0.1)) == 0;
         assert ((TimeSeriesStream.TimeSeriesVector) vector.divide(vector2)).getElements().get(hashKey).getValues().get(timestamp2).compareTo(TimeSeriesStream.INF_BIGDECIMAL) == 0;
+    }
+
+    @Test
+    public void testVectorArithmeticOpScalar() {
+        Long timestamp = 1L;
+        String hashKey = "";
+
+        TimeSeriesElement element = new TimeSeriesElement(hashKey, new HashMap<>(), new HashMap<>() {{
+            this.put(timestamp, BigDecimal.ONE);
+        }});
+        TimeSeriesStream.TimeSeriesVector vector = new TimeSeriesStream.TimeSeriesVector(new HashMap<>() {{
+            this.put(element.getLabelSetsHashKey(), element);
+        }});
+        TimeSeriesStream.TimeSeriesScalar scalar = new TimeSeriesStream.TimeSeriesScalar(BigDecimal.ZERO);
+
+        assert ((TimeSeriesStream.TimeSeriesVector) vector.add(scalar)).getElements().get(hashKey).getValues().get(timestamp).compareTo(BigDecimal.ONE) == 0;
+        assert ((TimeSeriesStream.TimeSeriesVector) vector.subtract(scalar)).getElements().get(hashKey).getValues().get(timestamp).compareTo(BigDecimal.ONE) == 0;
+        assert ((TimeSeriesStream.TimeSeriesVector) vector.multiply(scalar)).getElements().get(hashKey).getValues().get(timestamp).compareTo(BigDecimal.ZERO) == 0;
+        assert ((TimeSeriesStream.TimeSeriesVector) vector.divide(scalar)).getElements().get(hashKey).getValues().get(timestamp).compareTo(TimeSeriesStream.INF_BIGDECIMAL) == 0;
     }
 
     /**
@@ -161,18 +191,55 @@ public class TestPrometheusStreamComputing {
 
     @Test
     public void testVectorComparisonOpDoubleVector() {
-        BigDecimal a = new BigDecimal("1180976132.000000000000000");
-        BigDecimal b = new BigDecimal("1180976132");
-        MathContext mc = new MathContext(12); // 保留 12 位有效数字
-        BigDecimal aRounded = a.round(mc);
-        BigDecimal bRounded = b.round(mc);
-        System.out.println(aRounded);
-        System.out.println(bRounded);
-        System.out.println(aRounded.compareTo(bRounded) == 0);
+        BigDecimal a = new BigDecimal("0");
+        BigDecimal b = new BigDecimal("-100");
+        System.out.println(a.divide(b));
+        System.out.println(Double.NEGATIVE_INFINITY + Double.NEGATIVE_INFINITY);
+        System.out.println(Double.NEGATIVE_INFINITY == Double.NEGATIVE_INFINITY);
+        System.out.println(Double.isNaN(Double.NaN));
+    }
 
-        BigDecimal c = new BigDecimal("84");
-        BigDecimal d = new BigDecimal("-1721638059");
-        // -4.879074295603731E-8
-        System.out.println(c.divide(d, 25, RoundingMode.HALF_UP));
+    @Test
+    public void restorePromQLSolving() {
+        String databaseName = "tsafdb_44_6e0c3f97_a3a1_4d50_a4f1_bec15c0f66c5";
+        String tableName = "t1";
+        String tableName2 = "t2";
+        String columnName = "c0";
+        long startTimestamp = 1760423968000L;
+        long samplingPointNum = 200;
+        long endTimestamp = startTimestamp + samplingPointNum * 5 * 1000;
+        PrometheusInsertGenerator.putLastTimestamp(databaseName, tableName, endTimestamp);
+        PrometheusInsertGenerator.putLastTimestamp(databaseName, tableName2, endTimestamp);
+        String expr = "(tsafdb_44_6e0c3f97_a3a1_4d50_a4f1_bec15c0f66c5{table=\"t1\", timeSeries=\"c0\"}) UNLESS (((62) < (tsafdb_44_6e0c3f97_a3a1_4d50_a4f1_bec15c0f66c5{table=\"t1\", timeSeries=\"c0\"})) OR ((947) * (tsafdb_44_6e0c3f97_a3a1_4d50_a4f1_bec15c0f66c5{table=\"t1\", timeSeries=\"c0\"})))";
+
+        // 词法分析
+        List<PrometheusLexer.Token> toks = PrometheusLexer.tokenize(expr);
+        System.out.println("Tokens:");
+        for (PrometheusLexer.Token tk : toks) System.out.print(tk + " ");
+        System.out.println("\n\nParsing...");
+
+        // 语法解析
+        PrometheusParser p = new PrometheusParser(toks);
+        PrometheusExpression expression = p.parseExpression();
+
+        // 采样点设置 => 指定采样方程, table1 and table2
+        SamplingFrequencyManager.getInstance().addSamplingFrequency(databaseName,
+                tableName, startTimestamp, PrometheusTableGenerator.SAMPLING_NUMBER * 5 * 1000,
+                PrometheusTableGenerator.SAMPLING_NUMBER, SamplingFrequency.SamplingFrequencyType.UNIFORM_DISTRIBUTION);
+        SamplingFrequencyManager.getInstance().addSamplingFrequency(databaseName,
+                tableName2, startTimestamp, PrometheusTableGenerator.SAMPLING_NUMBER * 5 * 1000,
+                PrometheusTableGenerator.SAMPLING_NUMBER, SamplingFrequency.SamplingFrequencyType.UNIFORM_DISTRIBUTION);
+
+        // 数值方程组设定, table1 and table2
+        EquationsManager.getInstance()
+                .initEquationsFromTimeSeries(databaseName, tableName, columnName, TSAFDataType.INT);
+        EquationsManager.getInstance()
+                .initEquationsFromTimeSeries(databaseName, tableName2, columnName, TSAFDataType.INT);
+
+        TimeSeriesStream timeSeriesStream = PrometheusVisitor.streamComputeTimeSeriesVector(databaseName,
+                null, startTimestamp, expression, null);
+        System.out.println(timeSeriesStream);
+        TimeSeriesStream.TimeSeriesVector vector = (TimeSeriesStream.TimeSeriesVector) timeSeriesStream;
+        System.out.println(vector.getElements().get("_table_t1_timeSeries_c0").getValues().get(1760420229));
     }
 }

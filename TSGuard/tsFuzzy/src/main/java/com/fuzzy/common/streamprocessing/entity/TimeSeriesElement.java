@@ -28,7 +28,6 @@ public class TimeSeriesElement {
      */
     public String getLabelSetsHashKey() {
         StringBuilder hashKey = new StringBuilder();
-        // TODO 注: 暂时忽略 metricName 对时间序列的影响，
 //        hashKey.append(name);
         if (labelSets != null) {
             Map<String, String> sortedLabelSets = new TreeMap<>(labelSets);
@@ -36,7 +35,7 @@ public class TimeSeriesElement {
                 hashKey.append("_").append(entry.getKey()).append("_").append(entry.getValue());
             }
         }
-        return hashKey.isEmpty() ? hashKey.toString() : hashKey.substring(1);
+        return hashKey.toString();
     }
 
     /**

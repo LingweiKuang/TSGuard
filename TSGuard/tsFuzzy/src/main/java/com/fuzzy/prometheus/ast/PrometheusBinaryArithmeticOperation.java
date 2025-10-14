@@ -102,6 +102,15 @@ public class PrometheusBinaryArithmeticOperation implements PrometheusExpression
             return Randomly.fromOptions(PrometheusBinaryArithmeticOperator.PLUS,
                     PrometheusBinaryArithmeticOperator.SUBTRACT);
         }
+
+        public static PrometheusBinaryArithmeticOperator getOperatorByTextRepresentation(String textRepresentation) {
+            for (PrometheusBinaryArithmeticOperator value : PrometheusBinaryArithmeticOperator.values()) {
+                if (value.getTextRepresentation().equals(textRepresentation)) {
+                    return value;
+                }
+            }
+            throw new IllegalArgumentException("Invalid binary arithmetic operator: " + textRepresentation);
+        }
     }
 
     public PrometheusBinaryArithmeticOperation(PrometheusExpression left, PrometheusExpression right, PrometheusBinaryArithmeticOperator op) {

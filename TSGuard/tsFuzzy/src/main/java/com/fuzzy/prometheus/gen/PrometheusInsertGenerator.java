@@ -112,6 +112,10 @@ public class PrometheusInsertGenerator {
         return lastTimestamp.get(generateHashKey(databaseName, tableName));
     }
 
+    public static void putLastTimestamp(String databaseName, String tableName, Long timestamp) {
+        lastTimestamp.put(generateHashKey(databaseName, tableName), timestamp);
+    }
+
     public static String generateHashKey(String databaseName, String tableName) {
         return String.format("%s_%s", databaseName, tableName);
     }

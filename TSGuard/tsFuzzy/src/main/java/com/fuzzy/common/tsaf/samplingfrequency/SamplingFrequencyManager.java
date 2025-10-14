@@ -33,6 +33,13 @@ public class SamplingFrequencyManager {
         this.samplingFrequencyHashMap.put(genHashKey(databaseName, tableName), samplingFrequency);
     }
 
+    public void addSamplingFrequency(String databaseName, String tableName, Long startTimestamp, Long samplingPeriod,
+                                     Long samplingNumber, SamplingFrequency.SamplingFrequencyType type) {
+        SamplingFrequency samplingFrequency = new SamplingFrequency(Randomly.smallNumber(), startTimestamp,
+                samplingPeriod, samplingNumber, type);
+        this.samplingFrequencyHashMap.put(genHashKey(databaseName, tableName), samplingFrequency);
+    }
+
     public SamplingFrequency getSamplingFrequencyFromCollection(String databaseName, String tableName) {
         if (!this.samplingFrequencyHashMap.containsKey(genHashKey(databaseName, tableName))) {
             throw new AssertionError();

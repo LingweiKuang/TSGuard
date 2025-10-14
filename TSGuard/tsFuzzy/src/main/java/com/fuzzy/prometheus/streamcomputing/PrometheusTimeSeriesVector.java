@@ -39,9 +39,10 @@ public class PrometheusTimeSeriesVector extends TimeSeriesStream.TimeSeriesVecto
                     }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
             // 存储保留后的数值
-            TimeSeriesElement reservedElement = new TimeSeriesElement(element.getName(),
-                    element.getLabelSets(), filteredValues);
-            reservedElements.put(hashKey, reservedElement);
+            if (!filteredValues.isEmpty()) {
+                reservedElements.put(hashKey, new TimeSeriesElement(element.getName(), element.getLabelSets(),
+                        filteredValues));
+            }
         });
         return new TimeSeriesVector(reservedElements);
     }
@@ -53,9 +54,21 @@ public class PrometheusTimeSeriesVector extends TimeSeriesStream.TimeSeriesVecto
 
         Map<String, TimeSeriesElement> rightElements = rightVector.getElements();
         rightElements.forEach((hashKey, element) -> {
-            // 右侧匹配左侧不存在, 则将当前元素纳入新集合
+            // 左侧不存在, 则将当前元素纳入新集合
             if (!this.getElements().containsKey(hashKey)) {
                 reservedElements.put(hashKey, element);
+                return;
+            }
+
+            // 比较时间戳, 筛出左侧不存在的时间戳纳入集合
+            Map<Long, BigDecimal> leftValues = this.getElements().get(hashKey).getValues();
+            Map<Long, BigDecimal> rightValues = element.getValues();
+            Map<Long, BigDecimal> reservedValues = rightValues.entrySet().stream()
+                    .filter(entry -> !leftValues.containsKey(entry.getKey()))
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            // 保留右侧时序元素 时间戳集合 => name 仍为原始左侧元素的 metric name, 读取 prometheus 返回的数据也保持该逻辑
+            if (!reservedValues.isEmpty()) {
+                reservedElements.get(element.getLabelSetsHashKey()).getValues().putAll(reservedValues);
             }
         });
         return new TimeSeriesVector(reservedElements);

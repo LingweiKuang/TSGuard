@@ -554,8 +554,10 @@ public final class Main {
 
         if (options.performConnectionTest()) {
             try {
-                executorFactory.getDBMSExecutor(options.getDatabasePrefix() + "connectiontest", new Randomly())
-                        .testConnection();
+                if (!GlobalConstant.PROMETHEUS_DATABASE_NAME.equals(jc.getParsedCommand())) {
+                    executorFactory.getDBMSExecutor(options.getDatabasePrefix() + "connectiontest", new Randomly())
+                            .testConnection();
+                }
             } catch (Exception e) {
                 System.err.println(
                         "failed creating a test database, indicating that might have failed connecting to the DBMS. In order to change the username, password, host and port, you can use the --username, --password, --host and --port options.\n\n");
@@ -568,7 +570,7 @@ public final class Main {
             String databaseName = generateNameForDatabase(jc.getParsedCommand(), options.getDatabasePrefix(), i);
             // 测试数据时间范围：[cur - 3400, cur], unit: s
             // startTimestamp 需要随着测试的进行同步修正 -> remote write 仅支持插入 1h 内数据
-            if (jc.getParsedCommand().equals(GlobalConstant.PROMETHEUS_DATABASE_NAME)) {
+            if (GlobalConstant.PROMETHEUS_DATABASE_NAME.equals(jc.getParsedCommand())) {
                 long curTimestamp = System.currentTimeMillis() / 1000;
                 long startTimestamp = curTimestamp - 3000;
                 options.setStartTimestampOfTSData(startTimestamp);

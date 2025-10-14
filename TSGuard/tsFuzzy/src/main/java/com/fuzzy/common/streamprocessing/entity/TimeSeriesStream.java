@@ -94,13 +94,8 @@ public abstract class TimeSeriesStream {
                             Map<Long, BigDecimal> updatedValues = entry.getValue().getValues().entrySet().stream()
                                     .collect(Collectors.toMap(Map.Entry::getKey,
                                             timestampToValues -> {
-                                                // NAN
-                                                if (DIVIDE_OPERATION.equals(operationType)
-                                                        && scalar.getScalarValue().compareTo(BigDecimal.ZERO) == 0) {
-                                                    return timestampToValues.getValue().compareTo(BigDecimal.ZERO) > 0 ?
-                                                            INF_BIGDECIMAL : NEGATE_INF_BIGDECIMAL;
-                                                }
-                                                return op.apply(timestampToValues.getValue(), scalar.getScalarValue());
+                                                return ieee754Float64ArithmeticBinaryOperation(timestampToValues.getValue(),
+                                                        scalar.getScalarValue(), op, operationType);
                                             }));
                             return new TimeSeriesElement("",
                                     new HashMap<>(entry.getValue().getLabelSets()), updatedValues);
@@ -121,18 +116,16 @@ public abstract class TimeSeriesStream {
                     Map<Long, BigDecimal> streamComputeValues = new HashMap<>();
                     leftTimestampToValues.forEach((timestamp, value) -> {
                         if (rightTimestampToValues.containsKey(timestamp)) {
-                            // INF
-                            if (DIVIDE_OPERATION.equals(operationType)
-                                    && rightTimestampToValues.get(timestamp).compareTo(BigDecimal.ZERO) == 0) {
-                                streamComputeValues.put(timestamp, value.compareTo(BigDecimal.ZERO) > 0 ?
-                                        INF_BIGDECIMAL : NEGATE_INF_BIGDECIMAL);
-                            } else {
-                                streamComputeValues.put(timestamp, op.apply(value, rightTimestampToValues.get(timestamp)));
-                            }
+                            streamComputeValues.put(timestamp, ieee754Float64ArithmeticBinaryOperation(value,
+                                    rightTimestampToValues.get(timestamp), op, operationType));
                         }
                     });
-                    updatedElements.put(element.getLabelSetsHashKey(),
-                            new TimeSeriesElement("", new HashMap<>(element.getLabelSets()), streamComputeValues));
+                    // 值集合非空的情况, 将 element 纳入
+                    if (!streamComputeValues.isEmpty()) {
+                        TimeSeriesElement updatedElement = new TimeSeriesElement("",
+                                new HashMap<>(element.getLabelSets()), streamComputeValues);
+                        updatedElements.put(updatedElement.getLabelSetsHashKey(), updatedElement);
+                    }
                 });
                 return new TimeSeriesVector(updatedElements);
             } else {
@@ -284,15 +277,8 @@ public abstract class TimeSeriesStream {
          */
         public TimeSeriesStream arithmeticBinaryOperation(TimeSeriesStream other, BinaryOperator<BigDecimal> op, String operationType) {
             if (other instanceof TimeSeriesScalar scalar) {
-                BigDecimal dividedValue;
-                // NAN
-                if (DIVIDE_OPERATION.equals(operationType)
-                        && scalar.getScalarValue().compareTo(BigDecimal.ZERO) == 0) {
-                    dividedValue = scalarValue.compareTo(BigDecimal.ZERO) > 0 ? INF_BIGDECIMAL : NEGATE_INF_BIGDECIMAL;
-                } else {
-                    dividedValue = op.apply(this.scalarValue, scalar.getScalarValue());
-                }
-                return new TimeSeriesStream.TimeSeriesScalar(dividedValue);
+                return new TimeSeriesStream.TimeSeriesScalar(ieee754Float64ArithmeticBinaryOperation(this.scalarValue,
+                        scalar.getScalarValue(), op, operationType));
             } else if (other instanceof TimeSeriesVector timeSeriesVector) {
                 // 针对每个 element 均执行二元运算操作
                 Map<String, TimeSeriesElement> updatedElements = timeSeriesVector.getElements().entrySet().stream()
@@ -304,13 +290,8 @@ public abstract class TimeSeriesStream {
                             Map<Long, BigDecimal> updatedValues = entry.getValue().getValues().entrySet().stream()
                                     .collect(Collectors.toMap(Map.Entry::getKey,
                                             timestampToValues -> {
-                                                // NAN
-                                                if (DIVIDE_OPERATION.equals(operationType)
-                                                        && timestampToValues.getValue().compareTo(BigDecimal.ZERO) == 0) {
-                                                    return scalarValue.compareTo(BigDecimal.ZERO) > 0 ?
-                                                            INF_BIGDECIMAL : NEGATE_INF_BIGDECIMAL;
-                                                }
-                                                return op.apply(this.scalarValue, timestampToValues.getValue());
+                                                return ieee754Float64ArithmeticBinaryOperation(this.scalarValue,
+                                                        timestampToValues.getValue(), op, operationType);
                                             }));
                             return new TimeSeriesElement("", new HashMap<>(entry.getValue().getLabelSets()), updatedValues);
                         }));
@@ -438,6 +419,58 @@ public abstract class TimeSeriesStream {
     public TimeSeriesStream lessOrEqual(TimeSeriesStream other) {
         return comparisonBinaryOperation(other, (l, r) ->
                 l.compareTo(r) <= 0 ? BigDecimal.ONE : BigDecimal.ZERO);
+    }
+
+    public BigDecimal ieee754Float64ArithmeticBinaryOperation(BigDecimal firstValue, BigDecimal secondValue,
+                                                              BinaryOperator<BigDecimal> op, String operationType) {
+        // 若存在 INF、NAN、-INF 则转换为 Double 进行相关计算
+        if (firstValue.compareTo(NAN_BIGDECIMAL) == 0 || firstValue.compareTo(INF_BIGDECIMAL) == 0
+                || firstValue.compareTo(NEGATE_INF_BIGDECIMAL) == 0 || secondValue.compareTo(NAN_BIGDECIMAL) == 0
+                || secondValue.compareTo(INF_BIGDECIMAL) == 0 || secondValue.compareTo(NEGATE_INF_BIGDECIMAL) == 0) {
+
+            Double firstDouble = getDoubleSpecialValue(firstValue);
+            Double secondDouble = getDoubleSpecialValue(secondValue);
+            Double res = null;
+            switch (operationType) {
+                case ADD_OPERATION:
+                    res = firstDouble + secondDouble;
+                    break;
+                case SUBTRACT_OPERATION:
+                    res = firstDouble - secondDouble;
+                    break;
+                case MULTIPLY_OPERATION:
+                    res = firstDouble * secondDouble;
+                    break;
+                case DIVIDE_OPERATION:
+                    res = firstDouble / secondDouble;
+                    break;
+                default:
+                    throw new UnsupportedOperationException("Unsupported operation type: " + operationType);
+            }
+
+            // 依据 Double 值返回 BigDecimal 标记值
+            if (Double.isNaN(res)) {
+                return NAN_BIGDECIMAL;
+            } else if (Double.POSITIVE_INFINITY == res) {
+                return INF_BIGDECIMAL;
+            } else if (Double.NEGATIVE_INFINITY == res) {
+                return NEGATE_INF_BIGDECIMAL;
+            } else {
+                return BigDecimal.valueOf(res);
+            }
+        } else if (DIVIDE_OPERATION.equals(operationType) && secondValue.compareTo(BigDecimal.ZERO) == 0) {
+            // 除数为 0
+            return firstValue.compareTo(BigDecimal.ZERO) == 0 ? NAN_BIGDECIMAL
+                    : (firstValue.compareTo(BigDecimal.ZERO) > 0 ? INF_BIGDECIMAL : NEGATE_INF_BIGDECIMAL);
+        }
+        // 常规 BigDecimal 运算
+        return op.apply(firstValue, secondValue);
+    }
+
+    private Double getDoubleSpecialValue(BigDecimal bigDecimal) {
+        return bigDecimal.compareTo(NAN_BIGDECIMAL) == 0 ? Double.NaN :
+                (bigDecimal.compareTo(INF_BIGDECIMAL) == 0 ? Double.POSITIVE_INFINITY :
+                        (bigDecimal.compareTo(NEGATE_INF_BIGDECIMAL) == 0 ? Double.NEGATIVE_INFINITY : bigDecimal.doubleValue()));
     }
     // 运算规则置于具体数据库下面(待定), 毕竟各个数据库语义解析不同
 }

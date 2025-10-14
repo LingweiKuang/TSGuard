@@ -114,6 +114,15 @@ public class PrometheusBinaryComparisonOperation implements PrometheusExpression
         }
 
         public abstract BinaryComparisonOperator reverseInequality();
+
+        public static BinaryComparisonOperator parseBinaryComparisonOperator(String text) {
+            for (BinaryComparisonOperator value : BinaryComparisonOperator.values()) {
+                if (value.getTextRepresentation().equals(text)) {
+                    return value;
+                }
+            }
+            throw new IllegalArgumentException("Invalid binary comparison operator: " + text);
+        }
     }
 
     private final PrometheusExpression left;
