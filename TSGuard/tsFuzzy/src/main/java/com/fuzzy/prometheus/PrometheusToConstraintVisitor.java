@@ -329,6 +329,7 @@ public class PrometheusToConstraintVisitor extends ToStringVisitor<PrometheusExp
                     break;
                 case MULTIPLY:
                 case DIVIDE:
+                case ATAN2:
                 case MODULO:
                     // TODO 暂不支持列和列进行乘除操作
                     log.warn("暂不支持列和列进行乘、除、求模操作.");
@@ -388,6 +389,7 @@ public class PrometheusToConstraintVisitor extends ToStringVisitor<PrometheusExp
                         .toPlainString());
                 timeSeriesValue.multiplyFactor(constantValue);
                 break;
+            case ATAN2:
             case MODULO:
                 log.warn("不支持MODULO");
                 throw new IgnoreMeException();

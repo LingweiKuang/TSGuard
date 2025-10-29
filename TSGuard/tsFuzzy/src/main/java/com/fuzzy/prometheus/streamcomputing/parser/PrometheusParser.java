@@ -136,6 +136,7 @@ public class PrometheusParser {
             }
 
             // 解析为时间序列列
+            // TODO GAUGE
             PrometheusSchema.PrometheusColumn prometheusColumn = new PrometheusSchema.PrometheusColumn(
                     timeSeriesName, false, PrometheusSchema.PrometheusDataType.GAUGE);
             PrometheusSchema.PrometheusTable table = new PrometheusSchema.PrometheusTable(tableName, database,
@@ -143,6 +144,11 @@ public class PrometheusParser {
             prometheusColumn.setTable(table);
             return new PrometheusColumnReference(prometheusColumn,
                     PrometheusConstant.createBigDecimalConstant(BigDecimal.ONE));
+        }
+        if (tk.getType() == TokenType.BOOL) {
+            // 忽略标量前缀 bool
+            consume();
+            return parsePrimary();
         }
         if (tk.getType() == TokenType.LEFT_PAREN) {
             // 左括号

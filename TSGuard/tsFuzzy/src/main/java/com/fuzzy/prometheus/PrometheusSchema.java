@@ -46,14 +46,12 @@ public class PrometheusSchema extends AbstractSchema<PrometheusGlobalState, Prom
         }
 
         public static PrometheusSchema.PrometheusDataType[] valuesTSAFOrStreamComputing() {
-            return new PrometheusSchema.PrometheusDataType[]{GAUGE};
+            return new PrometheusSchema.PrometheusDataType[]{COUNTER, GAUGE};
         }
 
         public static PrometheusDataType getRandom(PrometheusGlobalState globalState) {
             if (globalState.usesPQS() || globalState.usesTSAF() || globalState.usesStreamComputing()) {
-                // TODO
-//                return Randomly.fromOptions(PrometheusDataType.COUNTER, PrometheusDataType.GAUGE);
-                return PrometheusDataType.GAUGE;
+                return Randomly.fromOptions(valuesTSAFOrStreamComputing());
             } else {
                 return Randomly.fromOptions(values());
             }

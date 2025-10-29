@@ -4,6 +4,7 @@ package com.fuzzy.prometheus.ast;
 import com.fuzzy.IgnoreMeException;
 import com.fuzzy.Randomly;
 import com.fuzzy.common.streamprocessing.entity.TimeSeriesStream;
+import com.fuzzy.common.util.BigDecimalUtil;
 import com.fuzzy.prometheus.PrometheusSchema;
 import lombok.extern.slf4j.Slf4j;
 
@@ -61,6 +62,13 @@ public class PrometheusBinaryArithmeticOperation implements PrometheusExpression
 
                 // TODO
                 return applyArithmeticOperation(left, right, (l, r) -> l.remainder(r));
+            }
+        },
+        ATAN2("atan2") {
+            @Override
+            public PrometheusConstant apply(PrometheusConstant left, PrometheusConstant right) {
+                return applyArithmeticOperation(left, right, (l, r) ->
+                        BigDecimalUtil.atan2(l, r, TimeSeriesStream.ARITHMETIC_PRECISION));
             }
         };
 

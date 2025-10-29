@@ -1,5 +1,6 @@
 package com.fuzzy.common.streamprocessing.entity;
 
+import com.fuzzy.common.util.BigDecimalUtil;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
@@ -18,6 +19,7 @@ public abstract class TimeSeriesStream {
     public static final String SUBTRACT_OPERATION = "subtract";
     public static final String MULTIPLY_OPERATION = "multiply";
     public static final String DIVIDE_OPERATION = "divide";
+    public static final String ATAN2_OPERATION = "atan2";
     public static final int COMPARISON_PRECISION = 13;
     public static final int ARITHMETIC_PRECISION = 50;
     public static final BigDecimal NAN_BIGDECIMAL = new BigDecimal("9999999999998");
@@ -389,6 +391,11 @@ public abstract class TimeSeriesStream {
     public TimeSeriesStream divide(TimeSeriesStream other) {
         return arithmeticBinaryOperation(other, (l, r) ->
                 l.divide(r, TimeSeriesStream.ARITHMETIC_PRECISION, RoundingMode.HALF_UP), DIVIDE_OPERATION);
+    }
+
+    public TimeSeriesStream atan2(TimeSeriesStream other) {
+        return arithmeticBinaryOperation(other, (l, r) ->
+                BigDecimalUtil.atan2(l, r, TimeSeriesStream.ARITHMETIC_PRECISION), ATAN2_OPERATION);
     }
 
     public TimeSeriesStream equal(TimeSeriesStream other) {

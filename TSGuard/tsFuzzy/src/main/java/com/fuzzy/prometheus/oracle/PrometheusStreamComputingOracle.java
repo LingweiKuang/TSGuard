@@ -89,37 +89,27 @@ public class PrometheusStreamComputingOracle
 //                PrometheusSchema.PrometheusDataType.TIMESTAMP), null));
         selectStatement.setFetchColumns(fetchColumns);
 
-        // TODO 时间范围全选 => 筛选范围
-        long queryStart = globalState.getOptions().getStartTimestampOfTSData() - 500 * 1000;
+        // 时间范围全选
+        long queryStart = globalState.getRandomly().getLong(
+                globalState.getOptions().getStartTimestampOfTSData() - 5000 * 1000,
+                globalState.getOptions().getStartTimestampOfTSData() - 500 * 1000);
         return new SQLQueryAdapter(new PrometheusQueryParam(PrometheusVisitor.asString(selectStatement), queryStart,
                 System.currentTimeMillis()).genPrometheusRequestParam(PrometheusRequestType.RANGE_QUERY), errors);
     }
 
     private PrometheusExpression generateExpression(List<PrometheusColumn> columns) {
-        PrometheusExpression result = null;
+        PrometheusExpression predicateExpression = null;
         boolean reGenerateExpr;
         int regenerateCounter = 0;
         String predicateSequence = "";
         do {
             reGenerateExpr = false;
             try {
-                PrometheusExpression predicateExpression =
-                        new PrometheusExpressionGenerator(globalState).setColumns(columns).generateExpression();
+                predicateExpression = new PrometheusExpressionGenerator(globalState).setColumns(columns).generateExpression();
 
-                // add time column
-//                PrometheusExpression timeExpression = new PrometheusTimeExpressionGenerator(globalState).setColumns(
-//                        Collections.singletonList(new PrometheusSchema.PrometheusColumn(PrometheusConstantString.TIME_FIELD_NAME.getName(),
-//                                false, PrometheusSchema.PrometheusDataType.TIMESTAMP))).generateExpression();
-//                PrometheusExpression timeExpression = null;
-
-//                result = new PrometheusBinaryLogicalOperation(rectifiedPredicateExpression, timeExpression,
-//                        PrometheusBinaryLogicalOperation.PrometheusBinaryLogicalOperator.AND);
-                // TODO 暂时忽略时间维度
-                result = predicateExpression;
-
-                // TODO 结果解析
+                // 结果解析
                 predicateSequence = PrometheusVisitor.asString(predicateExpression, true);
-                if (result.isScalarExpression()) {
+                if (predicateExpression.isScalarExpression()) {
                     // 仅含标量的表达式不进行度量
                     throw new ReGenerateExpressionException(String.format("该语法节点序列仅含标量, 需重新生成:%s",
                             predicateSequence));
@@ -142,10 +132,10 @@ public class PrometheusStreamComputingOracle
             }
         } while (reGenerateExpr);
 
-        log.info("Expression: {}", PrometheusVisitor.asString(result));
-        this.predicate = result;
+        log.info("Expression: {}", PrometheusVisitor.asString(predicateExpression));
+        this.predicate = predicateExpression;
         this.predicateSequence = predicateSequence;
-        return result;
+        return predicateExpression;
     }
 
     @Override

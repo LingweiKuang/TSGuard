@@ -23,6 +23,7 @@ public class PrometheusLexer {
         EQ, GT, LT, GE, LE, NE,
         PLUS, MINUS, DIVIDE, MULTIPLY,
         OR, AND, UNLESS,
+        BOOL,
         EOF
     }
 
@@ -147,6 +148,10 @@ public class PrometheusLexer {
             if ("UNLESS".equalsIgnoreCase(s.substring(st, st + 6).toUpperCase(Locale.ROOT))) {
                 p += 6;
                 return new Token(TokenType.UNLESS, s.substring(st, st + 6).toUpperCase(Locale.ROOT));
+            }
+            if ("bool".equalsIgnoreCase(s.substring(st, st + 4).toUpperCase(Locale.ROOT))) {
+                p += 4;
+                return new Token(TokenType.BOOL, s.substring(st, st + 4).toUpperCase(Locale.ROOT));
             }
 
             // 判定时间序列标识符

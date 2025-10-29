@@ -47,7 +47,6 @@ public class PrometheusExpressionGenerator extends UntypedExpressionGenerator<Pr
         // TODO
         // 查询有效性（靠标记规避语法不符合的节点）
         // 经过严格配对实验，以下各种组合均属于语法错误
-//        pairingProhibited.add(genHashKeyWithPairActions(Actions.LITERAL, Actions.LITERAL));
     }
 
     private String genHashKeyWithPairActions(final Actions parentNode, final Actions childNode) {
@@ -57,10 +56,7 @@ public class PrometheusExpressionGenerator extends UntypedExpressionGenerator<Pr
     private enum Actions {
         COLUMN, LITERAL, UNARY_PREFIX_OPERATION,
         BINARY_LOGICAL_OPERATOR, BINARY_COMPARISON_OPERATION, BINARY_ARITHMETIC_OPERATION,
-//        UNARY_NOT_PREFIX_OPERATION,
-//        BETWEEN_OPERATOR(true), CAST_OPERATOR(false),
-//        BINARY_OPERATION(false), IN_OPERATION(true),
-//        UNARY_POSTFIX(true), COMPUTABLE_FUNCTION(false),
+//        COMPUTABLE_FUNCTION(false),
         ;
     }
 
@@ -97,27 +93,12 @@ public class PrometheusExpressionGenerator extends UntypedExpressionGenerator<Pr
             case LITERAL:
                 expression = generateConstant();
                 break;
-//            case UNARY_NOT_PREFIX_OPERATION:
-//                PrometheusExpression subExpression = generateExpression(actions, depth + 1);
-//                expression = new PrometheusUnaryNotPrefixOperation(subExpression,
-//                        PrometheusUnaryNotPrefixOperation.PrometheusUnaryNotPrefixOperator.getRandom(subExpression));
-//                break;
             case UNARY_PREFIX_OPERATION:
                 expression = new PrometheusUnaryPrefixOperation(generateExpression(actions, depth + 1),
 //                        PrometheusUnaryPrefixOperator.getRandom()
                         PrometheusUnaryPrefixOperator.PLUS
                 );
                 break;
-//            case CAST_OPERATOR:
-//                PrometheusExpression columnExpr = generateColumn();
-//                expression = new PrometheusCastOperation(columnExpr,
-//                        PrometheusCastOperation.CastType.getRandom(columnExpr.getExpectedValue().getType()));
-//                break;
-//            case UNARY_POSTFIX:
-//                expression = new PrometheusUnaryPostfixOperation(generateExpression(actions, depth + 1),
-//                        Randomly.fromOptions(PrometheusUnaryPostfixOperation.UnaryPostfixOperator.values()),
-//                        Randomly.getBoolean());
-//                break;
 //            case COMPUTABLE_FUNCTION:
 //                expression = getComputableFunction();
 //                break;
@@ -141,31 +122,12 @@ public class PrometheusExpressionGenerator extends UntypedExpressionGenerator<Pr
                         generateExpression(actions, depth + 1),
                         BinaryComparisonOperator.getRandom());
                 break;
-//            case IN_OPERATION:
-//                PrometheusExpression expr = generateExpression(actions, depth + 1);
-//                List<PrometheusExpression> rightList = new ArrayList<>();
-//                for (int i = 0; i < 1 + Randomly.smallNumber(); i++)
-//                    // TODO reported bug: IN 类型不一致处理逻辑存在问题, 改为查找类型一致
-//                    rightList.add(generateConstantForPrometheusDataTypeForTSAF(expr.getExpectedValue().getType()));
-//                expression = new PrometheusInOperation(expr, rightList, Randomly.getBoolean());
-//                break;
-//            case BINARY_OPERATION:
-//                expression = new PrometheusBinaryOperation(
-//                        generateExpression(actions, depth + 1),
-//                        generateExpression(actions, depth + 1),
-//                        PrometheusBinaryOperator.getRandom());
-//                break;
             case BINARY_ARITHMETIC_OPERATION:
                 expression = new PrometheusBinaryArithmeticOperation(
                         generateExpression(actions, depth + 1),
                         generateExpression(actions, depth + 1),
                         PrometheusBinaryArithmeticOperation.PrometheusBinaryArithmeticOperator.getRandom());
                 break;
-//            case BETWEEN_OPERATOR:
-//                expression = new PrometheusBetweenOperation(generateExpression(actions, depth + 1),
-//                        generateExpression(actions, depth + 1),
-//                        generateExpression(actions, depth + 1), false);
-//                break;
             default:
                 throw new AssertionError();
         }
@@ -275,8 +237,9 @@ public class PrometheusExpressionGenerator extends UntypedExpressionGenerator<Pr
         } else {
             values = PrometheusDataType.values();
         }
-        // TODO 仅返回 -1000～1000值, 防止乘法范围溢出
+        // 仅返回 -1000～1000值, 防止乘法范围溢出
         switch (Randomly.fromOptions(values)) {
+            case COUNTER:
             case GAUGE:
                 return PrometheusConstant.createIntConstant(state.getRandomly().getInteger(-1000, 1000));
 //            case DOUBLE:

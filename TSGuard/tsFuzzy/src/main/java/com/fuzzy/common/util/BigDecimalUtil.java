@@ -1,6 +1,7 @@
 package com.fuzzy.common.util;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.math.RoundingMode;
 
 public class BigDecimalUtil {
@@ -32,5 +33,21 @@ public class BigDecimalUtil {
         } while (lastGuess.subtract(guess).abs().compareTo(epsilon) > 0);
 
         return guess;
+    }
+
+
+    /**
+     * BigDecimal 执行 atan2 三角二元计算, y atan2 x
+     *
+     * @param y
+     * @param x
+     * @return
+     */
+    public static BigDecimal atan2(BigDecimal y, BigDecimal x, int precision) {
+        double dy = y.doubleValue();
+        double dx = x.doubleValue();
+        double result = Math.atan2(dy, dx);
+        MathContext mc = new MathContext(precision);
+        return new BigDecimal(result, mc);
     }
 }

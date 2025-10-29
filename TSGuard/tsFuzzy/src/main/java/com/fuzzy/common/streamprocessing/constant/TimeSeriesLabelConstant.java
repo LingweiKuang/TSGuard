@@ -5,7 +5,10 @@ public enum TimeSeriesLabelConstant {
     DATABASE_INIT("databaseInit"),
     TABLE("table"),
     TIME_SERIES("timeSeries"),
-    METRIC_KEY("__name__");
+    METRIC_KEY("__name__"),
+    END_WITH_COUNTER("_counter"),
+    END_WITH_GAUGE("_gauge"),
+    ;
 
     private final String label;
 

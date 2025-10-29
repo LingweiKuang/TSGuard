@@ -4,6 +4,7 @@ import com.fuzzy.Randomly;
 import com.fuzzy.common.DBMSCommon;
 import com.fuzzy.common.query.ExpectedErrors;
 import com.fuzzy.common.query.SQLQueryAdapter;
+import com.fuzzy.common.streamprocessing.constant.TimeSeriesLabelConstant;
 import com.fuzzy.common.tsaf.samplingfrequency.SamplingFrequencyManager;
 import com.fuzzy.prometheus.PrometheusGlobalState;
 import com.fuzzy.prometheus.PrometheusSchema;
@@ -50,10 +51,11 @@ public class PrometheusTableGenerator {
         // MetricName -> CollectorAttribute
         Map<String, CollectorAttribute> collectorMap = new HashMap<>();
         for (int i = 0; i < 1 + Randomly.smallNumber(); i++) {
-            String columnName = genColumn(i);
+            PrometheusDataType dataType = PrometheusDataType.getRandom(globalState);
+            String columnName = genColumn(i, dataType);
+
             CollectorAttribute attribute = new CollectorAttribute();
-            // TODO init 类型和后续生成值类型需要保持一致
-            attribute.setDataType(PrometheusDataType.getRandom(globalState));
+            attribute.setDataType(dataType);
             attribute.setMetricName(globalState.getDatabaseName());
             attribute.setHelp(String.format("%s.%s.%s", globalState.getDatabaseName(), tableName, columnName));
 //            attribute.setDatabaseName(globalState.getDatabaseName());
@@ -68,8 +70,10 @@ public class PrometheusTableGenerator {
         return new SQLQueryAdapter(insertParam.genPrometheusQueryParam(), errors, true);
     }
 
-    private String genColumn(int columnId) {
+    private String genColumn(int columnId, PrometheusDataType dataType) {
         String columnName = DBMSCommon.createColumnName(columnId);
+        columnName += dataType == PrometheusDataType.COUNTER ? TimeSeriesLabelConstant.END_WITH_COUNTER.getLabel()
+                : TimeSeriesLabelConstant.END_WITH_GAUGE.getLabel();
         columns.add(columnName);
         return columnName;
     }

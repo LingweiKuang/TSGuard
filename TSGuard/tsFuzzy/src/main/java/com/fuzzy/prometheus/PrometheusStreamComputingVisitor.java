@@ -144,6 +144,30 @@ public class PrometheusStreamComputingVisitor extends ToStringVisitor<Prometheus
     }
 
     @Override
+    public void visit(PrometheusBinaryArithmeticOperation op) {
+        visit(op.getLeft());
+        visit(op.getRight());
+        TimeSeriesStream right = timeSeriesStreamStack.pop();
+        TimeSeriesStream left = timeSeriesStreamStack.pop();
+
+        PrometheusBinaryArithmeticOperation.PrometheusBinaryArithmeticOperator operator = op.getOp();
+        TimeSeriesStream timeSeriesStreamRes = switch (operator) {
+            case PLUS -> left.add(right);
+            case SUBTRACT -> left.subtract(right);
+            case MULTIPLY -> left.multiply(right);
+            case DIVIDE -> left.divide(right);
+            case ATAN2 -> left.atan2(right);
+            case MODULO -> {
+                log.warn("暂时不支持MODULO");
+                throw new IgnoreMeException();
+            }
+            default -> throw new AssertionError();
+        };
+
+        timeSeriesStreamStack.add(timeSeriesStreamRes);
+    }
+
+    @Override
     public void visit(PrometheusUnaryNotPrefixOperation op) {
         // TODO 暂时不实现 NOT 前缀表达
         // Unary NOT Prefix Operation
@@ -162,36 +186,6 @@ public class PrometheusStreamComputingVisitor extends ToStringVisitor<Prometheus
         } else {
             throw new AssertionError();
         }
-    }
-
-    @Override
-    public void visit(PrometheusBinaryArithmeticOperation op) {
-        visit(op.getLeft());
-        visit(op.getRight());
-        TimeSeriesStream right = timeSeriesStreamStack.pop();
-        TimeSeriesStream left = timeSeriesStreamStack.pop();
-
-        PrometheusBinaryArithmeticOperation.PrometheusBinaryArithmeticOperator operator = op.getOp();
-
-        // 常量 op 常量
-        if (left.isScalar() && right.isScalar()) {
-            visit(op.getExpectedValue());
-            return;
-        }
-
-        TimeSeriesStream timeSeriesStreamRes = switch (operator) {
-            case PLUS -> left.add(right);
-            case SUBTRACT -> left.subtract(right);
-            case MULTIPLY -> left.multiply(right);
-            case DIVIDE -> left.divide(right);
-            case MODULO -> {
-                log.warn("暂时不支持MODULO");
-                throw new IgnoreMeException();
-            }
-            default -> throw new AssertionError();
-        };
-
-        timeSeriesStreamStack.add(timeSeriesStreamRes);
     }
 
 //    @Override

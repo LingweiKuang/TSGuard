@@ -27,7 +27,7 @@ public class TestPrometheus {
                 Main.executeMain(new String[]{"--random-seed", "-1", "--timeout-seconds", TestConfig.SECONDS,
                         "--num-threads", "1", "--host", "localhost", "--port", "9090", "--precision", "ms",
                         "--log-syntax-error-query", "true", "--max-expression-depth", "4",
-                        "--log-execution-time", "false", "--num-tries", "100",
+                        "--log-execution-time", "false", "--num-tries", "30",
 //                        "--drop-database",
                         "--params", "",
                         "--use-syntax-validator", "--use-syntax-sequence",

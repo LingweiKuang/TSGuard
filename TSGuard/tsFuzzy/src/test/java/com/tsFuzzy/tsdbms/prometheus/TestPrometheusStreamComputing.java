@@ -16,6 +16,7 @@ import com.fuzzy.prometheus.streamcomputing.parser.PrometheusParser;
 import org.junit.Test;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.util.HashMap;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -201,16 +202,17 @@ public class TestPrometheusStreamComputing {
 
     @Test
     public void restorePromQLSolving() {
-        String databaseName = "tsafdb_44_6e0c3f97_a3a1_4d50_a4f1_bec15c0f66c5";
+        String databaseName = "tsafdb_16_cc2768b4_e23f_456e_b6de_da749755b498";
         String tableName = "t1";
         String tableName2 = "t2";
-        String columnName = "c0";
+        String columnName = "c0_counter";
         long startTimestamp = 1760423968000L;
         long samplingPointNum = 200;
         long endTimestamp = startTimestamp + samplingPointNum * 5 * 1000;
         PrometheusInsertGenerator.putLastTimestamp(databaseName, tableName, endTimestamp);
         PrometheusInsertGenerator.putLastTimestamp(databaseName, tableName2, endTimestamp);
-        String expr = "(tsafdb_44_6e0c3f97_a3a1_4d50_a4f1_bec15c0f66c5{table=\"t1\", timeSeries=\"c0\"}) UNLESS (((62) < (tsafdb_44_6e0c3f97_a3a1_4d50_a4f1_bec15c0f66c5{table=\"t1\", timeSeries=\"c0\"})) OR ((947) * (tsafdb_44_6e0c3f97_a3a1_4d50_a4f1_bec15c0f66c5{table=\"t1\", timeSeries=\"c0\"})))";
+        // ((((tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"}) / (tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"})) OR ((+ (tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"})))) * (((-677) atan2 (tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"})) OR ((tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"}) + (tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"})))) / ((((-197) - (tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"})) * ((tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"}) - (tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"}))) UNLESS (((tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"}) OR (tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"})) != ((tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"}) AND (tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"}))))
+        String expr = "(tsafdb_16_cc2768b4_e23f_456e_b6de_da749755b498{table=\"t1\", timeSeries=\"c0_counter\"}) / (((-229) > bool (147)) / ((+ (-486))))";
 
         // 词法分析
         List<PrometheusLexer.Token> toks = PrometheusLexer.tokenize(expr);
@@ -239,7 +241,19 @@ public class TestPrometheusStreamComputing {
         TimeSeriesStream timeSeriesStream = PrometheusVisitor.streamComputeTimeSeriesVector(databaseName,
                 null, startTimestamp, expression, null);
         System.out.println(timeSeriesStream);
-        TimeSeriesStream.TimeSeriesVector vector = (TimeSeriesStream.TimeSeriesVector) timeSeriesStream;
-        System.out.println(vector.getElements().get("_table_t1_timeSeries_c0").getValues().get(1760420229));
+//        TimeSeriesStream.TimeSeriesVector vector = (TimeSeriesStream.TimeSeriesVector) timeSeriesStream;
+//        System.out.println(vector.getElements().get("_table_t1_timeSeries_c0").getValues().get(1760420229));
+    }
+
+    @Test
+    public void bigDecimalTest() {
+//        0.00817995910020449897750511247443762781186094069530 actualValue:0.0081799591002045
+//        -1.5565115842074999097377485668403096497058868408203 actualValue:-1.5565115842075
+//        75.11799410029498525073746312684365781710914454277340000000000000000 actualValue:75.117994100295
+//        -0.00518600337041149947672544420549037078252205481896 actualValue:-0.0051860033704115
+        BigDecimal expectedValue = new BigDecimal("-0");
+        BigDecimal actualValue = new BigDecimal("0");
+        System.out.println(expectedValue.equals(actualValue));
+        System.out.println(expectedValue.compareTo(actualValue));
     }
 }

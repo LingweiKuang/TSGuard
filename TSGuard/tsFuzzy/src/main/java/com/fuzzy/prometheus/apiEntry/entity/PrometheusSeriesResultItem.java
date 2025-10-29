@@ -2,6 +2,7 @@ package com.fuzzy.prometheus.apiEntry.entity;
 
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.annotation.JSONField;
+import com.fuzzy.common.streamprocessing.constant.TimeSeriesLabelConstant;
 import com.fuzzy.prometheus.PrometheusSchema.PrometheusColumn;
 import com.fuzzy.prometheus.PrometheusSchema.PrometheusDataType;
 import lombok.Data;
@@ -18,10 +19,10 @@ public class PrometheusSeriesResultItem {
     private String column;
 
     public PrometheusColumn transToColumn() {
-        // TODO 列类型的确定，暂定测试 GAUGE 类型
-        PrometheusDataType dataType = PrometheusDataType.GAUGE;
-//        if (database.endsWith("_total")) dataType = PrometheusDataType.COUNTER;
-//        else dataType = PrometheusDataType.GAUGE;
+        // 列类型的确定
+        PrometheusDataType dataType;
+        if (column.endsWith(TimeSeriesLabelConstant.END_WITH_COUNTER.getLabel())) dataType = PrometheusDataType.COUNTER;
+        else dataType = PrometheusDataType.GAUGE;
         return new PrometheusColumn(column, false, dataType);
     }
 

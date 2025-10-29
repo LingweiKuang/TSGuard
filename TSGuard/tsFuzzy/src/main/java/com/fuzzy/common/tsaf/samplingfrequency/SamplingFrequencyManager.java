@@ -4,6 +4,7 @@ import com.fuzzy.Randomly;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -45,6 +46,12 @@ public class SamplingFrequencyManager {
             throw new AssertionError();
         }
         return this.samplingFrequencyHashMap.get(genHashKey(databaseName, tableName));
+    }
+
+    public List<SamplingFrequency> getAllSamplingFrequencyFromCollection(String databaseName) {
+        return this.samplingFrequencyHashMap.entrySet().stream()
+                .filter(entry -> entry.getKey().startsWith(databaseName))
+                .map(Map.Entry::getValue).toList();
     }
 
     public String genHashKey(String databaseName, String tableName) {

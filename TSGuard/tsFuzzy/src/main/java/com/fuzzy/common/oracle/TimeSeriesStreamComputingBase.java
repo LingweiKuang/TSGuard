@@ -13,6 +13,8 @@ import com.fuzzy.common.query.QueryExecutionStatistical;
 import com.fuzzy.common.streamprocessing.entity.TimeSeriesStream;
 import com.fuzzy.common.tsaf.Equations;
 import com.fuzzy.common.tsaf.EquationsManager;
+import com.fuzzy.common.tsaf.samplingfrequency.SamplingFrequency;
+import com.fuzzy.common.tsaf.samplingfrequency.SamplingFrequencyManager;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -101,6 +103,12 @@ public abstract class TimeSeriesStreamComputingBase<S extends GlobalState<?, ?, 
             sb.append("--\n-- Equations Params:\n")
                     .append("-- ")
                     .append(JSONObject.toJSONString(equations));
+            // 采样频率
+            List<SamplingFrequency> samplingFrequencies =
+                    SamplingFrequencyManager.getInstance().getAllSamplingFrequencyFromCollection(globalState.getDatabaseName());
+            sb.append("--\n-- Sampling Frequency:\n")
+                    .append("-- ")
+                    .append(JSONObject.toJSONString(samplingFrequencies));
             // 表达式抽象结构
             pivotRowAbstractPredicates.forEach(pivotRow -> {
                 if (pivotRow.contains(predicateSequence)) {
