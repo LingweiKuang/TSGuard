@@ -8,6 +8,7 @@ public enum TimeSeriesLabelConstant {
     METRIC_KEY("__name__"),
     END_WITH_COUNTER("_counter"),
     END_WITH_GAUGE("_gauge"),
+    END_WITH_VALUE("_value"),
     ;
 
     private final String label;

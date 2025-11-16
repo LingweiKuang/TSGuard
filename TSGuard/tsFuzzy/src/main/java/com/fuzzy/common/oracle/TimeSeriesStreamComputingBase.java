@@ -15,6 +15,8 @@ import com.fuzzy.common.tsaf.Equations;
 import com.fuzzy.common.tsaf.EquationsManager;
 import com.fuzzy.common.tsaf.samplingfrequency.SamplingFrequency;
 import com.fuzzy.common.tsaf.samplingfrequency.SamplingFrequencyManager;
+import com.fuzzy.victoriametrics.apientry.VMRequestParam;
+import com.fuzzy.victoriametrics.apientry.entity.VMRangeQueryRequest;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -68,7 +70,9 @@ public abstract class TimeSeriesStreamComputingBase<S extends GlobalState<?, ?, 
             // 流式计算获取预期结果集
             TimeSeriesStream expectedResultSet = null;
             try {
-                expectedResultSet = getExpectedValues(predicate);
+                VMRequestParam requestParam = JSONObject.parseObject(query.getQueryString(), VMRequestParam.class);
+                VMRangeQueryRequest request = JSONObject.parseObject(requestParam.getBody(), VMRangeQueryRequest.class);
+                expectedResultSet = getExpectedValues(predicate, request.getEnd());
             } catch (IgnoreMeException e) {
                 // TODO StreamComputing 暂不支持该复杂表达式运算, 将其命中统计为success
                 incrementQueryExecutionCounter(QueryExecutionStatistical.QueryExecutionType.success);
@@ -85,7 +89,9 @@ public abstract class TimeSeriesStreamComputingBase<S extends GlobalState<?, ?, 
 
         StringBuilder sb = new StringBuilder();
         if (predicate != null) {
-            TimeSeriesStream expectedValues = getExpectedValues(predicate);
+            VMRequestParam requestParam = JSONObject.parseObject(query.getQueryString(), VMRequestParam.class);
+            VMRangeQueryRequest request = JSONObject.parseObject(requestParam.getBody(), VMRangeQueryRequest.class);
+            TimeSeriesStream expectedValues = getExpectedValues(predicate, request.getEnd());
             int size = expectedValues.isScalar() ? 1 :
                     ((TimeSeriesStream.TimeSeriesVector) expectedValues).getElements().size();
             // 流数据数目
@@ -134,7 +140,7 @@ public abstract class TimeSeriesStreamComputingBase<S extends GlobalState<?, ?, 
 
     protected abstract void incrementQueryExecutionCounter(QueryExecutionStatistical.QueryExecutionType queryType);
 
-    protected abstract TimeSeriesStream getExpectedValues(E expr);
+    protected abstract TimeSeriesStream getExpectedValues(E expr, long endTimestamp);
 
     protected abstract boolean verifyResultSet(TimeSeriesStream expectedResultSet, DBValResultSet result);
 

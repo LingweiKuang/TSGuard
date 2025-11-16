@@ -1,18 +1,23 @@
 package com.benchmark.util;
 
+import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.*;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -25,6 +30,8 @@ public class HttpClientUtils {
                 return get(url, heads);
             case POST:
                 return post(url, data, heads);
+            case POST_WITH_URLENCODED:
+                return postWithUrlEncoded(url, data, heads);
             case DELETE:
                 return delete(url, heads);
             case PUT:
@@ -71,6 +78,7 @@ public class HttpClientUtils {
      * http post
      */
     private static String post(String url, String data, Map<String, String> heads) {
+        // TODO 优化：缓存客户端
         org.apache.http.client.HttpClient httpClient = HttpClients.createDefault();
         HttpResponse httpResponse = null;
         String result = "";
@@ -93,6 +101,50 @@ public class HttpClientUtils {
         } catch (IOException e) {
             log.error("发送POST请求失败, e:", e);
         }
+        return result;
+    }
+
+    private static String postWithUrlEncoded(String url, String data, Map<String, String> heads) {
+        CloseableHttpClient client = HttpClients.createDefault();
+        HttpPost post = new HttpPost(url);
+
+        // 设置表单格式
+        post.setHeader("Content-Type", "application/x-www-form-urlencoded");
+        if (heads != null) {
+            Set<String> keySet = heads.keySet();
+            for (String s : keySet) {
+                if ("Content-Type".equalsIgnoreCase(s)) continue;
+                post.addHeader(s, heads.get(s));
+            }
+        }
+
+        // 构造表单内容
+        List<BasicNameValuePair> params = new ArrayList<>();
+        JSONObject jsonObject = JSONObject.parseObject(data);
+        for (String key : jsonObject.keySet()) {
+            params.add(new BasicNameValuePair(key, String.valueOf(jsonObject.get(key))));
+        }
+
+        String result = "";
+        try {
+            post.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
+
+            // 发送请求
+            HttpResponse response = client.execute(post);
+            if (response.getEntity() != null) {
+                result = EntityUtils.toString(response.getEntity());
+            }
+        } catch (Exception e) {
+            log.error("发送POST请求失败, e:", e);
+        } finally {
+            // 关闭客户端，释放资源
+            try {
+                client.close();
+            } catch (IOException e) {
+                log.error("关闭HttpClient失败, e:", e);
+            }
+        }
+
         return result;
     }
 

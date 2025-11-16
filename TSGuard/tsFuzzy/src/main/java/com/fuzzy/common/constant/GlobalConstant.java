@@ -6,6 +6,7 @@ public class GlobalConstant {
     public static final String TDENGINE_DATABASE_NAME = "TDengine";
     public static final String PROMETHEUS_DATABASE_NAME = "Prometheus";
     public static final String GRIDDB_DATABASE_NAME = "GridDB";
+    public static final String VICTORIA_METRICS_DATABASE_NAME = "VictoriaMetrics";
 
     // 抽象节点
     public static final String TABLE_NAME = "table";

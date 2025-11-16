@@ -3,3 +3,4 @@ com.fuzzy.iotdb.IotDBProvider
 com.fuzzy.prometheus.PrometheusProvider
 com.fuzzy.TDengine.TDengineProvider
 com.fuzzy.griddb.GridDBProvider
+com.fuzzy.victoriametrics.VMProvider

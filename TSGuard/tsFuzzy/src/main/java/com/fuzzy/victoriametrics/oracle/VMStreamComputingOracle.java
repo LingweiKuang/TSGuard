@@ -1,6 +1,7 @@
-package com.fuzzy.prometheus.oracle;
+package com.fuzzy.victoriametrics.oracle;
 
 
+import com.alibaba.fastjson.JSONObject;
 import com.benchmark.entity.DBValResultSet;
 import com.fuzzy.Randomly;
 import com.fuzzy.SQLConnection;
@@ -13,21 +14,22 @@ import com.fuzzy.common.schema.AbstractTableColumn;
 import com.fuzzy.common.streamprocessing.entity.TimeSeriesStream;
 import com.fuzzy.common.tsaf.QueryType;
 import com.fuzzy.common.tsaf.TableToNullValuesManager;
-import com.fuzzy.prometheus.PrometheusErrors;
-import com.fuzzy.prometheus.PrometheusGlobalState;
-import com.fuzzy.prometheus.PrometheusSchema;
-import com.fuzzy.prometheus.PrometheusSchema.PrometheusColumn;
-import com.fuzzy.prometheus.PrometheusSchema.PrometheusTable;
-import com.fuzzy.prometheus.PrometheusVisitor;
-import com.fuzzy.prometheus.apiEntry.PrometheusQueryParam;
-import com.fuzzy.prometheus.apiEntry.PrometheusRequestType;
-import com.fuzzy.prometheus.ast.PrometheusColumnReference;
-import com.fuzzy.prometheus.ast.PrometheusExpression;
-import com.fuzzy.prometheus.ast.PrometheusSelect;
-import com.fuzzy.prometheus.ast.PrometheusTableReference;
-import com.fuzzy.prometheus.feedback.PrometheusQuerySynthesisFeedbackManager;
-import com.fuzzy.prometheus.gen.PrometheusExpressionGenerator;
-import com.fuzzy.prometheus.resultSet.PrometheusResultSet;
+import com.fuzzy.victoriametrics.VMErrors;
+import com.fuzzy.victoriametrics.VMGlobalState;
+import com.fuzzy.victoriametrics.VMSchema;
+import com.fuzzy.victoriametrics.VMSchema.VMColumn;
+import com.fuzzy.victoriametrics.VMSchema.VMTable;
+import com.fuzzy.victoriametrics.VMVisitor;
+import com.fuzzy.victoriametrics.apientry.VMRequestParam;
+import com.fuzzy.victoriametrics.apientry.VMRequestType;
+import com.fuzzy.victoriametrics.apientry.entity.VMRangeQueryRequest;
+import com.fuzzy.victoriametrics.ast.VMColumnReference;
+import com.fuzzy.victoriametrics.ast.VMExpression;
+import com.fuzzy.victoriametrics.ast.VMSelect;
+import com.fuzzy.victoriametrics.ast.VMTableReference;
+import com.fuzzy.victoriametrics.feedback.VMQuerySynthesisFeedbackManager;
+import com.fuzzy.victoriametrics.gen.VMExpressionGenerator;
+import com.fuzzy.victoriametrics.resultset.VMResultSet;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
@@ -37,29 +39,29 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class PrometheusStreamComputingOracle
-        extends TimeSeriesStreamComputingBase<PrometheusGlobalState, PrometheusExpression, SQLConnection> {
+public class VMStreamComputingOracle
+        extends TimeSeriesStreamComputingBase<VMGlobalState, VMExpression, SQLConnection> {
 
-    private List<PrometheusExpression> fetchColumns;
-    private List<PrometheusColumn> columns;
-    private PrometheusTable table;
-    private PrometheusExpression whereClause;
-    PrometheusSelect selectStatement;
+    private List<VMExpression> fetchColumns;
+    private List<VMColumn> columns;
+    private VMTable table;
+    private VMExpression whereClause;
+    VMSelect selectStatement;
 
-    public PrometheusStreamComputingOracle(PrometheusGlobalState globalState) {
+    public VMStreamComputingOracle(VMGlobalState globalState) {
         super(globalState);
-        PrometheusErrors.addExpressionErrors(errors);
+        VMErrors.addExpressionErrors(errors);
     }
 
     @Override
     public Query<SQLConnection> getTimeSeriesQuery() {
-        PrometheusSchema schema = globalState.getSchema();
-        PrometheusSchema.PrometheusTables randomFromTables = schema.getRandomTableNonEmptyTables();
-        List<PrometheusTable> tables = randomFromTables.getTables();
-        selectStatement = new PrometheusSelect();
+        VMSchema schema = globalState.getSchema();
+        VMSchema.VMTables randomFromTables = schema.getRandomTableNonEmptyTables();
+        List<VMTable> tables = randomFromTables.getTables();
+        selectStatement = new VMSelect();
         table = Randomly.fromList(tables);
         columns = randomFromTables.getColumns();
-        selectStatement.setFromList(tables.stream().map(PrometheusTableReference::new).collect(Collectors.toList()));
+        selectStatement.setFromList(tables.stream().map(VMTableReference::new).collect(Collectors.toList()));
 
         // TODO
 //        QueryType queryType = Randomly.fromOptions(QueryType.values());
@@ -76,39 +78,38 @@ public class PrometheusStreamComputingOracle
 //        // TimeSeries Function
 //        else if (queryType.isTimeSeriesFunction()) {
 //            // 随机窗口查询测试
-//            selectStatement.setTimeSeriesFunction(PrometheusTimeSeriesFunc.getRandomFunction(
+//            selectStatement.setTimeSeriesFunction(VMTimeSeriesFunc.getRandomFunction(
 //                    columns, globalState.getRandomly()));
 //        }
 
         // fetchColumns
-        fetchColumns = columns.stream().map(c -> new PrometheusColumnReference(c, null))
+        fetchColumns = columns.stream().map(c -> new VMColumnReference(c, null))
                 .collect(Collectors.toList());
-//        String timeColumnName = queryType.isTimeWindowQuery() ? PrometheusConstantString.W_START_TIME_COLUMN_NAME.getName() :
-//                PrometheusConstantString.TIME_FIELD_NAME.getName();
-//        fetchColumns.add(new PrometheusColumnReference(new PrometheusSchema.PrometheusColumn(timeColumnName, false,
-//                PrometheusSchema.PrometheusDataType.TIMESTAMP), null));
         selectStatement.setFetchColumns(fetchColumns);
 
         // 时间范围全选
-        long queryStart = globalState.getRandomly().getLong(
-                globalState.getOptions().getStartTimestampOfTSData() - 5000 * 1000,
-                globalState.getOptions().getStartTimestampOfTSData() - 500 * 1000);
-        return new SQLQueryAdapter(new PrometheusQueryParam(PrometheusVisitor.asString(selectStatement), queryStart,
-                System.currentTimeMillis()).genPrometheusRequestParam(PrometheusRequestType.RANGE_QUERY), errors);
+        String metricQL = VMVisitor.asString(selectStatement);
+        // EndTime 随机选，预期结果集跟随 endtime
+        VMRangeQueryRequest request = new VMRangeQueryRequest(metricQL, "1s",
+                globalState.getOptions().getStartTimestampOfTSData(),
+                globalState.getOptions().getStartTimestampOfTSData() + 100 * 1000);
+        // INSTANT_QUERY or RANGE_QUERY
+        return new SQLQueryAdapter(JSONObject.toJSONString(new VMRequestParam(VMRequestType.RANGE_QUERY,
+                JSONObject.toJSONString(request))), errors);
     }
 
-    private PrometheusExpression generateExpression(List<PrometheusColumn> columns) {
-        PrometheusExpression predicateExpression = null;
+    private VMExpression generateExpression(List<VMColumn> columns) {
+        VMExpression predicateExpression = null;
         boolean reGenerateExpr;
         int regenerateCounter = 0;
         String predicateSequence = "";
         do {
             reGenerateExpr = false;
             try {
-                predicateExpression = new PrometheusExpressionGenerator(globalState).setColumns(columns).generateExpression();
+                predicateExpression = new VMExpressionGenerator(globalState).setColumns(columns).generateExpression();
 
                 // 结果解析
-                predicateSequence = PrometheusVisitor.asString(predicateExpression, true);
+                predicateSequence = VMVisitor.asString(predicateExpression, true);
                 if (predicateExpression.isScalarExpression()) {
                     // 仅含标量的表达式不进行度量
                     throw new ReGenerateExpressionException(String.format("该语法节点序列仅含标量, 需重新生成:%s",
@@ -116,23 +117,23 @@ public class PrometheusStreamComputingOracle
                 }
 
                 if (globalState.getOptions().useSyntaxSequence()
-                        && PrometheusQuerySynthesisFeedbackManager.isRegenerateSequence(predicateSequence)) {
+                        && VMQuerySynthesisFeedbackManager.isRegenerateSequence(predicateSequence)) {
                     regenerateCounter++;
-                    if (regenerateCounter >= PrometheusQuerySynthesisFeedbackManager.MAX_REGENERATE_COUNT_PER_ROUND) {
-                        PrometheusQuerySynthesisFeedbackManager.incrementExpressionDepth(
+                    if (regenerateCounter >= VMQuerySynthesisFeedbackManager.MAX_REGENERATE_COUNT_PER_ROUND) {
+                        VMQuerySynthesisFeedbackManager.incrementExpressionDepth(
                                 globalState.getOptions().getMaxExpressionDepth());
                         regenerateCounter = 0;
                     }
                     throw new ReGenerateExpressionException(String.format("该语法节点序列需重新生成:%s", predicateSequence));
                 }
                 // 更新概率表
-                PrometheusQuerySynthesisFeedbackManager.addSequenceRegenerateProbability(predicateSequence);
+                VMQuerySynthesisFeedbackManager.addSequenceRegenerateProbability(predicateSequence);
             } catch (ReGenerateExpressionException e) {
                 reGenerateExpr = true;
             }
         } while (reGenerateExpr);
 
-        log.info("Expression: {}", PrometheusVisitor.asString(predicateExpression));
+        log.info("Expression: {}", VMVisitor.asString(predicateExpression));
         this.predicate = predicateExpression;
         this.predicateSequence = predicateSequence;
         return predicateExpression;
@@ -140,20 +141,20 @@ public class PrometheusStreamComputingOracle
 
     @Override
     protected void setSequenceRegenerateProbabilityToMax(String sequence) {
-        PrometheusQuerySynthesisFeedbackManager.setSequenceRegenerateProbabilityToMax(sequence);
+        VMQuerySynthesisFeedbackManager.setSequenceRegenerateProbabilityToMax(sequence);
     }
 
     @Override
     protected void incrementQueryExecutionCounter(QueryExecutionStatistical.QueryExecutionType queryType) {
         switch (queryType) {
             case error:
-                PrometheusQuerySynthesisFeedbackManager.incrementErrorQueryCount();
+                VMQuerySynthesisFeedbackManager.incrementErrorQueryCount();
                 break;
             case invalid:
-                PrometheusQuerySynthesisFeedbackManager.incrementInvalidQueryCount();
+                VMQuerySynthesisFeedbackManager.incrementInvalidQueryCount();
                 break;
             case success:
-                PrometheusQuerySynthesisFeedbackManager.incrementSuccessQueryCount();
+                VMQuerySynthesisFeedbackManager.incrementSuccessQueryCount();
                 break;
             default:
                 throw new UnsupportedOperationException(String.format("Invalid QueryExecutionType: %s", queryType));
@@ -161,13 +162,13 @@ public class PrometheusStreamComputingOracle
     }
 
     @Override
-    protected TimeSeriesStream getExpectedValues(PrometheusExpression expression, long endTimestamp) {
+    protected TimeSeriesStream getExpectedValues(VMExpression expression, long endTimestamp) {
         String databaseName = globalState.getDatabaseName();
         String tableName = table.getName();
         List<String> fetchColumnNames = columns.stream().map(AbstractTableColumn::getName).collect(Collectors.toList());
         // 表达式计算
-        return PrometheusVisitor.streamComputeTimeSeriesVector(databaseName,
-                fetchColumnNames, globalState.getOptions().getStartTimestampOfTSData(), expression,
+        return VMVisitor.streamComputeTimeSeriesVector(databaseName,
+                fetchColumnNames, globalState.getOptions().getStartTimestampOfTSData(), endTimestamp, expression,
                 TableToNullValuesManager.getNullValues(databaseName, tableName));
     }
 
@@ -187,21 +188,21 @@ public class PrometheusStreamComputingOracle
     private boolean verifyTimeWindowQuery(TimeSeriesStream expectedResultSet, DBValResultSet result)
             throws Exception {
 //        // 对expectedResultSet进行聚合, 聚合结果按照时间戳作为Key, 进行进一步数值比较
-//        PrometheusResultSet PrometheusResultSet = (PrometheusResultSet) result;
+//        VMResultSet VMResultSet = (VMResultSet) result;
 //        Map<Long, List<BigDecimal>> resultSet = null;
 //        if (!result.hasNext()) {
 //            if (selectStatement.getQueryType().isTimeWindowQuery()) return expectedResultSet.isEmpty();
 //            else
-//                return PrometheusTimeSeriesFunc.apply(selectStatement.getTimeSeriesFunction(), expectedResultSet).isEmpty();
+//                return VMTimeSeriesFunc.apply(selectStatement.getTimeSeriesFunction(), expectedResultSet).isEmpty();
 //        }
 //
 //        // 窗口聚合 -> 预期结果集
 //        if (selectStatement.getQueryType().isTimeWindowQuery()) {
-//            PrometheusColumn timeColumn = new PrometheusColumn(PrometheusValueStateConstant.TIME_FIELD.getValue(),
-//                    false, PrometheusDataType.TIMESTAMP);
-//            int timeIndex = PrometheusResultSet.findColumn(timeColumn.getName());
+//            VMColumn timeColumn = new VMColumn(VMValueStateConstant.TIME_FIELD.getValue(),
+//                    false, VMDataType.TIMESTAMP);
+//            int timeIndex = VMResultSet.findColumn(timeColumn.getName());
 //            // 获取窗口划分初始时间戳
-//            long startTimestamp = getConstantFromResultSet(PrometheusResultSet.getCurrentValue().getValues().get(0),
+//            long startTimestamp = getConstantFromResultSet(VMResultSet.getCurrentValue().getValues().get(0),
 //                    timeColumn.getType(), timeIndex).getBigDecimalValue().longValue();
 //            String intervalVal = selectStatement.getIntervalValues().get(0);
 //            long duration = globalState.transTimestampToPrecision(
@@ -209,7 +210,7 @@ public class PrometheusStreamComputingOracle
 //            resultSet = selectStatement.getAggregationType()
 //                    .apply(expectedResultSet, startTimestamp, duration, duration);
 //        } else if (selectStatement.getQueryType().isTimeSeriesFunction())
-//            resultSet = PrometheusTimeSeriesFunc.apply(selectStatement.getTimeSeriesFunction(), expectedResultSet);
+//            resultSet = VMTimeSeriesFunc.apply(selectStatement.getTimeSeriesFunction(), expectedResultSet);
 //
 //        // 验证结果
 //        result.resetCursor();
@@ -220,7 +221,7 @@ public class PrometheusStreamComputingOracle
     }
 
     /**
-     * Prometheus 按照 step 取数，对于不存在的点自动往前取最近点数据。
+     * VM 按照 step 取数，对于不存在的点自动往前取最近点数据。
      * 因此，比对逻辑：真实结果集一定包含预期结果集所有数据。
      *
      * @param expectedResultSet
@@ -236,13 +237,13 @@ public class PrometheusStreamComputingOracle
 
     private VerifyResultState verifyRowResult(TimeSeriesStream expectedResultSet, DBValResultSet result)
             throws Exception {
-        PrometheusResultSet prometheusResultSet = (PrometheusResultSet) result;
+        VMResultSet VMResultSet = (VMResultSet) result;
         // 解析 DBValResultSet
         try {
-            TimeSeriesStream actualResultSet = prometheusResultSet.genTimeSeriesStream();
+            TimeSeriesStream actualResultSet = VMResultSet.genTimeSeriesStream();
             return actualResultSet.containsAndEquals(expectedResultSet) ? VerifyResultState.SUCCESS : VerifyResultState.FAIL;
         } catch (Exception e) {
-            log.error("解码 JSON 格式异常, json:{} e:", prometheusResultSet.getJsonResult(), e);
+            log.error("解码 JSON 格式异常, json:{} e:", VMResultSet.getJsonResult(), e);
             return VerifyResultState.FAIL;
         }
     }
@@ -278,44 +279,44 @@ public class PrometheusStreamComputingOracle
                 aggregationResultSet.size(), aggregationResultSet));
     }
 
-    //    private PrometheusConstant getConstantFromResultSet(List<String> resultSet, PrometheusDataType dataType,
+    //    private VMConstant getConstantFromResultSet(List<String> resultSet, VMDataType dataType,
 //                                                      int columnIndex) {
-//        if (resultSet.get(columnIndex).equalsIgnoreCase("null")) return PrometheusConstant.createNullConstant();
+//        if (resultSet.get(columnIndex).equalsIgnoreCase("null")) return VMConstant.createNullConstant();
 //
-//        PrometheusConstant constant;
+//        VMConstant constant;
 //        switch (dataType) {
 //            case BOOLEAN:
-//                constant = PrometheusConstant.createBoolean(
+//                constant = VMConstant.createBoolean(
 //                        resultSet.get(columnIndex).equalsIgnoreCase("true"));
 //                break;
 //            case STRING:
-//                constant = PrometheusConstant.createSingleQuotesStringConstant(resultSet.get(columnIndex));
+//                constant = VMConstant.createSingleQuotesStringConstant(resultSet.get(columnIndex));
 //                break;
 //            case INT:
 //            case UINT:
 //            case FLOAT:
 //            case BIGDECIMAL:
-//                constant = PrometheusConstant.createBigDecimalConstant(
+//                constant = VMConstant.createBigDecimalConstant(
 //                        new BigDecimal(resultSet.get(columnIndex)));
 //                break;
 //            case TIMESTAMP:
 //                // 时间格式 -> 直接返回, 不再进行空值判定
-//                constant = PrometheusConstant.createBigDecimalConstant(
+//                constant = VMConstant.createBigDecimalConstant(
 //                        new BigDecimal(globalState.transDateToTimestamp(resultSet.get(columnIndex))));
 //                break;
 //            default:
 //                throw new AssertionError(dataType);
 //        }
 //        if (selectStatement.getAggregationType() != null
-//                && PrometheusAggregationType.getPrometheusAggregationType(selectStatement.getAggregationType()).isFillZero()
+//                && VMAggregationType.getVMAggregationType(selectStatement.getAggregationType()).isFillZero()
 //                && constant.getBigDecimalValue().compareTo(BigDecimal.ZERO) == 0
-//                && dataType != PrometheusDataType.TIMESTAMP)
-//            return PrometheusConstant.createNullConstant();
+//                && dataType != VMDataType.TIMESTAMP)
+//            return VMConstant.createNullConstant();
 //        return constant;
 //    }
 
 //    private void generateTimeWindowClause() {
-//        selectStatement.setAggregationType(PrometheusAggregationType.getRandomAggregationType());
+//        selectStatement.setAggregationType(VMAggregationType.getRandomAggregationType());
 //
 //        List<String> intervals = new ArrayList<>();
 //        // TODO 采样点前后1000s 取决于采样点endStartTimestamp
@@ -330,9 +331,9 @@ public class PrometheusStreamComputingOracle
 //        selectStatement.setIntervalValues(intervals);
 //    }
 
-//    private List<PrometheusExpression> generateGroupByClause(List<PrometheusColumn> columns, PrometheusRowValue rw) {
+//    private List<VMExpression> generateGroupByClause(List<VMColumn> columns, VMRowValue rw) {
 //        if (Randomly.getBoolean()) {
-//            return columns.stream().map(c -> PrometheusColumnReference.create(c, rw.getValues().get(c)))
+//            return columns.stream().map(c -> VMColumnReference.create(c, rw.getValues().get(c)))
 //                    .collect(Collectors.toList());
 //        } else {
 //            return Collections.emptyList();

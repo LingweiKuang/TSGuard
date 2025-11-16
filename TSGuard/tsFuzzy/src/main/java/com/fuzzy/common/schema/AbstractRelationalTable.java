@@ -35,6 +35,7 @@ public class AbstractRelationalTable<C extends AbstractTableColumn<?, ?>, I exte
                 if (query == null) {
                     throw new IgnoreMeException();
                 }
+                // 判断第一条满足数量规则即可
                 query.hasNext();
                 rowCount = query.getLong(getSelectCountIndex());
                 return rowCount;

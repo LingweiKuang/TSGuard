@@ -12,6 +12,7 @@
 target/
 */target/
 .idea/
+/.idea
 lib/*.jar
 release/
 
