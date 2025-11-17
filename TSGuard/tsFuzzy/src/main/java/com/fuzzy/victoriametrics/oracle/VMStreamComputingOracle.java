@@ -133,7 +133,6 @@ public class VMStreamComputingOracle
             }
         } while (reGenerateExpr);
 
-        log.info("Expression: {}", VMVisitor.asString(predicateExpression));
         this.predicate = predicateExpression;
         this.predicateSequence = predicateSequence;
         return predicateExpression;

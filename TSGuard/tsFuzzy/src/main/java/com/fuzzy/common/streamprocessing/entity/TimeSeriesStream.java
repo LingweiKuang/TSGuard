@@ -451,6 +451,9 @@ public abstract class TimeSeriesStream {
                 case DIVIDE_OPERATION:
                     res = firstDouble / secondDouble;
                     break;
+                case ATAN2_OPERATION:
+                    res = Math.atan2(secondDouble, firstDouble);
+                    break;
                 default:
                     throw new UnsupportedOperationException("Unsupported operation type: " + operationType);
             }

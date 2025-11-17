@@ -16,11 +16,8 @@ import com.fuzzy.prometheus.streamcomputing.parser.PrometheusParser;
 import org.junit.Test;
 
 import java.math.BigDecimal;
-import java.math.MathContext;
 import java.util.HashMap;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class TestPrometheusStreamComputing {
 
@@ -212,7 +209,7 @@ public class TestPrometheusStreamComputing {
         PrometheusInsertGenerator.putLastTimestamp(databaseName, tableName, endTimestamp);
         PrometheusInsertGenerator.putLastTimestamp(databaseName, tableName2, endTimestamp);
         // ((((tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"}) / (tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"})) OR ((+ (tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"})))) * (((-677) atan2 (tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"})) OR ((tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"}) + (tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"})))) / ((((-197) - (tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"})) * ((tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"}) - (tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"}))) UNLESS (((tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"}) OR (tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"})) != ((tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"}) AND (tsafdb_23_39fdf0b3_4f65_41c0_b059_a5026968a10c{table="t1", timeSeries="c0_counter"}))))
-        String expr = "(tsafdb_16_cc2768b4_e23f_456e_b6de_da749755b498{table=\"t1\", timeSeries=\"c0_counter\"}) / (((-229) > bool (147)) / ((+ (-486))))";
+        String expr = "(+ (tsafdb_16_cc2768b4_e23f_456e_b6de_da749755b498{table=\"t1\", timeSeries=\"c0_counter\"}))";
 
         // 词法分析
         List<PrometheusLexer.Token> toks = PrometheusLexer.tokenize(expr);

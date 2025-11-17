@@ -10,7 +10,9 @@ import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.pool.PoolStats;
 import org.apache.http.util.EntityUtils;
 
 import java.io.*;
@@ -20,9 +22,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class HttpClientUtils {
+
+    private static final PoolingHttpClientConnectionManager poolingConnManager = new PoolingHttpClientConnectionManager();
+
+    static {
+        poolingConnManager.setMaxTotal(20);  // 设置最大连接数
+        poolingConnManager.setDefaultMaxPerRoute(5);  // 每个路由的最大连接数
+        poolingConnManager.closeExpiredConnections();
+        poolingConnManager.closeIdleConnections(5, TimeUnit.SECONDS);
+    }
 
     public static String sendRequest(String url, String data, Map<String, String> heads, HttpRequestEnum requestType) {
         switch (requestType) {
@@ -42,6 +54,15 @@ public class HttpClientUtils {
         }
     }
 
+    private static void outPoolingHttpClientConnectionState() {
+        // 获取连接池的统计信息
+        PoolStats totalStats = poolingConnManager.getTotalStats();
+        System.out.println("当前连接池总连接数: " + totalStats.getMax());
+        System.out.println("当前活动(Leased)连接数: " + totalStats.getLeased());
+        System.out.println("当前空闲(Available)连接数: " + totalStats.getAvailable());
+        System.out.println("当前等待(Pending)连接数: " + totalStats.getPending());
+    }
+
     /**
      * http get
      *
@@ -49,7 +70,6 @@ public class HttpClientUtils {
      * @param heads http 头信息
      */
     private static String get(String url, Map<String, String> heads) {
-        org.apache.http.client.HttpClient httpClient = HttpClients.createDefault();
         HttpResponse httpResponse = null;
         String result = "";
         HttpGet httpGet = new HttpGet(url);
@@ -60,17 +80,19 @@ public class HttpClientUtils {
             }
         }
 
+        CloseableHttpClient httpClient = HttpClients.custom()
+                .setConnectionManager(poolingConnManager)
+                .build();
         try {
             httpResponse = httpClient.execute(httpGet);
             HttpEntity httpEntity = httpResponse.getEntity();
             if (httpEntity != null) {
                 result = EntityUtils.toString(httpEntity, "utf-8");
-
             }
-
         } catch (IOException e) {
             e.printStackTrace();
         }
+
         return result;
     }
 
@@ -78,8 +100,6 @@ public class HttpClientUtils {
      * http post
      */
     private static String post(String url, String data, Map<String, String> heads) {
-        // TODO 优化：缓存客户端
-        org.apache.http.client.HttpClient httpClient = HttpClients.createDefault();
         HttpResponse httpResponse = null;
         String result = "";
 
@@ -90,6 +110,10 @@ public class HttpClientUtils {
                 httpPost.addHeader(s, heads.get(s));
             }
         }
+
+        CloseableHttpClient httpClient = HttpClients.custom()
+                .setConnectionManager(poolingConnManager)
+                .build();
         try {
             StringEntity s = new StringEntity(data, "utf-8");
             httpPost.setEntity(s);
@@ -105,7 +129,6 @@ public class HttpClientUtils {
     }
 
     private static String postWithUrlEncoded(String url, String data, Map<String, String> heads) {
-        CloseableHttpClient client = HttpClients.createDefault();
         HttpPost post = new HttpPost(url);
 
         // 设置表单格式
@@ -126,6 +149,10 @@ public class HttpClientUtils {
         }
 
         String result = "";
+
+        CloseableHttpClient client = HttpClients.custom()
+                .setConnectionManager(poolingConnManager)
+                .build();
         try {
             post.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
 
@@ -136,13 +163,6 @@ public class HttpClientUtils {
             }
         } catch (Exception e) {
             log.error("发送POST请求失败, e:", e);
-        } finally {
-            // 关闭客户端，释放资源
-            try {
-                client.close();
-            } catch (IOException e) {
-                log.error("关闭HttpClient失败, e:", e);
-            }
         }
 
         return result;
@@ -151,7 +171,11 @@ public class HttpClientUtils {
     public static String post(String url, byte[] data, Map<String, String> headers) {
         // 创建HttpClient实例
         String result = "";
-        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+
+        CloseableHttpClient httpClient = HttpClients.custom()
+                .setConnectionManager(poolingConnManager)
+                .build();
+        try {
             // 创建POST请求对象
             HttpPost httpPost = new HttpPost(url);
 
@@ -235,35 +259,6 @@ public class HttpClientUtils {
         }
     }
 
-    /*private static String post(String url, String data, Map<String, String> heads) {
-        StringBuilder sb = new StringBuilder();
-        try {
-            URLConnection conn = new URL(url).openConnection();
-
-            if (heads != null) {
-                Set<String> keySet = heads.keySet();
-                for (String s : keySet) {
-                    conn.setRequestProperty(s, heads.get(s));
-                }
-            }
-            conn.setDoOutput(true);
-            conn.setDoInput(true);
-            // fill and send content
-            DataOutputStream dos = new DataOutputStream(conn.getOutputStream());
-            dos.write(data.getBytes());
-            dos.flush();
-            // get response (Do not comment this line, or the data insertion will be failed)
-            BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-            String str;
-            while ((str = in.readLine()) != null) {
-                sb.append(str);
-            }
-        } catch (Exception e) {
-            log.error("", e);
-        }
-        return sb.toString();
-    }*/
-
     /**
      * http delete
      *
@@ -271,7 +266,6 @@ public class HttpClientUtils {
      * @param heads http 头信息
      */
     private static String delete(String url, Map<String, String> heads) {
-        org.apache.http.client.HttpClient httpClient = HttpClients.createDefault();
         HttpResponse httpResponse = null;
         String result = "";
 
@@ -283,6 +277,9 @@ public class HttpClientUtils {
             }
         }
 
+        CloseableHttpClient httpClient = HttpClients.custom()
+                .setConnectionManager(poolingConnManager)
+                .build();
         try {
             httpResponse = httpClient.execute(httpDelete);
             HttpEntity httpEntity = httpResponse.getEntity();
@@ -302,7 +299,6 @@ public class HttpClientUtils {
      * http put
      */
     private static String put(String url, String data, Map<String, String> heads) {
-        org.apache.http.client.HttpClient httpClient = HttpClients.createDefault();
         HttpResponse httpResponse = null;
         String result = "";
 
@@ -314,6 +310,9 @@ public class HttpClientUtils {
             }
         }
 
+        CloseableHttpClient httpClient = HttpClients.custom()
+                .setConnectionManager(poolingConnManager)
+                .build();
         try {
             StringEntity s = new StringEntity(data, "utf-8");
             httpPut.setEntity(s);

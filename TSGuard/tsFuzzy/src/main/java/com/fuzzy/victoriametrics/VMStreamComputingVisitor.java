@@ -6,6 +6,7 @@ import com.fuzzy.common.streamprocessing.entity.TimeSeriesStream;
 import com.fuzzy.common.visitor.ToStringVisitor;
 import com.fuzzy.common.visitor.UnaryOperation;
 import com.fuzzy.victoriametrics.ast.*;
+import com.fuzzy.victoriametrics.gen.VMInsertGenerator;
 import com.fuzzy.victoriametrics.streamcomputing.VMTimeSeriesVector;
 import lombok.extern.slf4j.Slf4j;
 
@@ -58,6 +59,10 @@ public class VMStreamComputingVisitor extends ToStringVisitor<VMExpression> impl
 
     @Override
     public void visit(VMConstant constant) {
+        // VM MetricsQL 将标量类型视作即时向量(instant vector)，遗弃 TimeSeriesStream.TimeSeriesScalar
+        // Source: MetricsQL treats scalar type the same as instant vector without labels, since subtle differences between these types usually confuse users. See the corresponding Prometheus docs for details.
+        // Link: https://docs.victoriametrics.com/victoriametrics/metricsql
+        // TODO
         TimeSeriesStream timeSeriesStream = new TimeSeriesStream.TimeSeriesScalar(
                 new BigDecimal(constant.getTextRepresentation()));
         timeSeriesStreamStack.add(timeSeriesStream);
@@ -66,9 +71,11 @@ public class VMStreamComputingVisitor extends ToStringVisitor<VMExpression> impl
     @Override
     public void visit(VMColumnReference timeSeries) {
         String tableName = timeSeries.getColumn().getTable().getName();
+        // 预期结果集生成时，不应超过最大数据生成的时间戳范围。超过最大生成时间戳的，真实结果集会默认补最近值，预期结果集会按照函数生成
         TimeSeriesStream.TimeSeriesVector timeSeriesVector = StreamGeneration.genVectorFromSampling(databaseName, tableName,
                 Collections.singletonList(timeSeries.getColumn().getName()),
-                startTimestamp, endTimestamp,
+                startTimestamp,
+                Math.min(VMInsertGenerator.getLastTimestamp(databaseName, tableName), endTimestamp),
                 VMConstant.createFloatArithmeticTolerance());
         timeSeriesStreamStack.add(timeSeriesVector);
     }
@@ -102,7 +109,7 @@ public class VMStreamComputingVisitor extends ToStringVisitor<VMExpression> impl
             case UNLESS -> leftVector.unless(rightVector);
             default -> throw new AssertionError();
         };
-        timeSeriesStreamStack.add(timeSeriesVectorRes);
+        timeSeriesStreamStack.add(new VMTimeSeriesVector(timeSeriesVectorRes));
     }
 
     @Override
@@ -117,7 +124,6 @@ public class VMStreamComputingVisitor extends ToStringVisitor<VMExpression> impl
         TimeSeriesStream right = timeSeriesStreamStack.pop();
         TimeSeriesStream left = timeSeriesStreamStack.pop();
 
-        // 标量/标量、向量/标量 以及 向量/向量
         VMBinaryComparisonOperation.BinaryComparisonOperator operator = op.getOp();
         TimeSeriesStream timeSeriesStreamResult = switch (operator) {
             case EQUALS -> left.equal(right);
@@ -128,6 +134,35 @@ public class VMStreamComputingVisitor extends ToStringVisitor<VMExpression> impl
             case LESS_EQUALS -> left.lessOrEqual(right);
             default -> throw new AssertionError();
         };
+//        TimeSeriesStream timeSeriesStreamResult;
+//        if (left.isVector() && right.isVector()) {
+//            // 向量/向量
+//            VMTimeSeriesVector leftVector = new VMTimeSeriesVector((TimeSeriesStream.TimeSeriesVector) left);
+//            VMTimeSeriesVector rightVector = new VMTimeSeriesVector((TimeSeriesStream.TimeSeriesVector) right);
+//            VMBinaryComparisonOperation.BinaryComparisonOperator operator = op.getOp();
+//            timeSeriesStreamResult = switch (operator) {
+//                case EQUALS -> leftVector.equal(rightVector);
+//                case NOT_EQUALS -> leftVector.notEqual(rightVector);
+//                case GREATER -> leftVector.greaterThan(rightVector);
+//                case GREATER_EQUALS -> leftVector.greaterOrEqual(rightVector);
+//                case LESS -> leftVector.lessThan(rightVector);
+//                case LESS_EQUALS -> leftVector.lessOrEqual(rightVector);
+//                default -> throw new AssertionError();
+//            };
+//        } else {
+//            // 标量/标量、向量/标量
+//            VMBinaryComparisonOperation.BinaryComparisonOperator operator = op.getOp();
+//            timeSeriesStreamResult = switch (operator) {
+//                case EQUALS -> left.equal(right);
+//                case NOT_EQUALS -> left.notEqual(right);
+//                case GREATER -> left.greaterThan(right);
+//                case GREATER_EQUALS -> left.greaterOrEqual(right);
+//                case LESS -> left.lessThan(right);
+//                case LESS_EQUALS -> left.lessOrEqual(right);
+//                default -> throw new AssertionError();
+//            };
+//        }
+
         timeSeriesStreamStack.add(timeSeriesStreamResult);
     }
 

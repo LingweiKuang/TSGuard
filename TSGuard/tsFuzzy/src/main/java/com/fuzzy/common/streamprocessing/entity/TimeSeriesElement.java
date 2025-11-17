@@ -95,4 +95,46 @@ public class TimeSeriesElement {
         }
         return true;
     }
+
+    /**
+     * 比较本元素 是否包含 其他元素，忽略预期结果集中的 NaN 值
+     *
+     * @param timeSeriesElement
+     * @return
+     */
+    public boolean containsElementIgnoreNaN(TimeSeriesElement timeSeriesElement) {
+        // 默认 float64 => 有效数字精度: 15–17 位十进制有效数字
+        // 统一截断至 13 位有效精度
+        MathContext unifyMc = new MathContext(TimeSeriesStream.COMPARISON_PRECISION);
+        for (Long expectedTimestamp : timeSeriesElement.values.keySet()) {
+            // 统一预期结果集和真实结果集时间戳精度
+            Long timestamp = expectedTimestamp / 1000;
+            BigDecimal expectedValue = timeSeriesElement.getValues().get(expectedTimestamp);
+            // 忽略预期结果集 NaN 值的比较
+            if (expectedValue.compareTo(TimeSeriesStream.NAN_BIGDECIMAL) == 0) {
+                continue;
+            }
+
+            if (!this.values.containsKey(timestamp)) {
+                // 1. 真实结果集不包含预期时间戳
+                log.error("真实结果集不包含预期时间戳, timestamp: {}", timestamp);
+                return false;
+            } else {
+                // 两者在指定时间戳不一致, 返回 false
+                // 保留真实结果集 precision 位有效位数
+                BigDecimal actualValue = values.get(timestamp);
+                MathContext actualValueMc = new MathContext(actualValue.precision());
+                // 统一精度比较 且 按照真实结果集精度 且 截断至7位有效小数 比较都无法核对正确
+                if (expectedValue.round(unifyMc).compareTo(actualValue.round(unifyMc)) != 0
+                        && expectedValue.round(actualValueMc).compareTo(actualValue) != 0
+                        && expectedValue.setScale(7, RoundingMode.HALF_UP)
+                        .compareTo(actualValue.setScale(7, RoundingMode.HALF_UP)) != 0) {
+                    log.error("真实结果集包含预期时间戳, 但是值不匹配. timestamp: {} expectedValue: {} actualValue:{}",
+                            timestamp, expectedValue, actualValue);
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 }

@@ -48,4 +48,28 @@ public class StreamGeneration {
         return new TimeSeriesStream.TimeSeriesVector(elements);
     }
 
+    /**
+     * 针对某个具体的标量值，生成不具备标签值的即时向量(instant vector)
+     */
+    public static TimeSeriesStream.TimeSeriesVector genInstantVectorFromSampling(long startTimestamp, long endTimestamp,
+                                                                                 BigDecimal scalar) {
+
+        // 默认每秒采样一个数据点
+        SamplingFrequency samplingFrequency = new SamplingFrequency(0, startTimestamp, 5 * 1000L,
+                1L, SamplingFrequency.SamplingFrequencyType.UNIFORM_DISTRIBUTION);
+        // 获取原始向量时间戳集合
+        List<Long> timestamps = samplingFrequency.apply(startTimestamp, endTimestamp);
+
+        // 依据向量中时序不同(采样函数不一致), 生成标量值
+        List<TimeSeriesElement> elements = new ArrayList<>();
+        Map<Long, BigDecimal> timestampToValueMap = new HashMap<>();
+        for (Long timestamp : timestamps) {
+            BigDecimal value = new BigDecimal(scalar.toPlainString());
+            timestampToValueMap.put(timestamp, value);
+        }
+        // element
+        elements.add(new TimeSeriesElement("", new HashMap<>(), timestampToValueMap));
+        return new TimeSeriesStream.TimeSeriesVector(elements);
+    }
+
 }
