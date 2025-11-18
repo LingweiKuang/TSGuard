@@ -15,7 +15,7 @@ public class TestVM {
                 Main.executeMain(new String[]{"--random-seed", "-1", "--timeout-seconds", TestConfig.SECONDS,
                         "--num-threads", "1", "--host", "localhost", "--port", "8428", "--precision", "ms",
                         "--log-syntax-error-query", "true", "--max-expression-depth", "4",
-                        "--log-execution-time", "false", "--num-tries", "25",
+                        "--log-execution-time", "false", "--num-tries", "150",
                         "--drop-database",
                         "--params", "", "--start-timestamp", "1735660800",
                         "--use-syntax-validator", "--use-syntax-sequence",

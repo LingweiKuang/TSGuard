@@ -137,4 +137,16 @@ public class TimeSeriesElement {
         }
         return true;
     }
+
+    /**
+     * 判断是否所有元素值均为 NaN
+     */
+    public boolean allValueIsNaN() {
+        for (BigDecimal value : values.values()) {
+            if (value.compareTo(TimeSeriesStream.NAN_BIGDECIMAL) != 0) {
+                return false;
+            }
+        }
+        return true;
+    }
 }

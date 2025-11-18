@@ -67,22 +67,21 @@ public class InfluxDBInsertGenerator {
 
         String databaseName = globalState.getDatabaseName();
         String tableName = table.getName();
-        int nrRows = SAMPLING_NUMBER;
         String databaseAndTableName = generateHashKey(databaseName, tableName);
         long startTimestamp = globalState.getNextSampleTimestamp(lastTimestamp.get(databaseAndTableName));
-        long endTimestamp = startTimestamp + nrRows * globalState.getOptions().getSamplingFrequency();
+        long endTimestamp = startTimestamp + SAMPLING_NUMBER * globalState.getOptions().getSamplingFrequency();
         SamplingFrequency samplingFrequency = SamplingFrequencyManager.getInstance()
                 .getSamplingFrequencyFromCollection(databaseName, tableName);
         List<Long> timestamps = samplingFrequency.apply(startTimestamp, endTimestamp);
         lastTimestamp.put(databaseAndTableName, endTimestamp);
-        for (int row = 0; row < nrRows; row++) {
+        for (Long timestamp : timestamps) {
             // 针对旧Tag插入新点值
             sb.append(table.getRandomSeries()).append(" ");
             // timestamp -> 按照采样间隔顺序插入
-            long nextTimestamp = timestamps.get(row);
-            for (int c = 0; c < fieldColumns.size(); c++) {
-                InfluxDBSchema.InfluxDBDataType columnType = fieldColumns.get(c).getType();
-                String columnName = fieldColumns.get(c).getName();
+            long nextTimestamp = timestamp;
+            for (InfluxDBColumn fieldColumn : fieldColumns) {
+                InfluxDBSchema.InfluxDBDataType columnType = fieldColumn.getType();
+                String columnName = fieldColumn.getName();
                 sb.append(columnName)
                         .append("=");
                 BigDecimal columnValue = EquationsManager

@@ -11,10 +11,12 @@ import com.fuzzy.victoriametrics.VMGlobalState;
 import com.fuzzy.victoriametrics.VMSchema;
 import com.fuzzy.victoriametrics.apientry.VMRequestParam;
 import com.fuzzy.victoriametrics.apientry.VMRequestType;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 public class VMTableGenerator {
 
     public static final long SAMPLING_NUMBER = 10;
@@ -65,6 +67,7 @@ public class VMTableGenerator {
 
         String query = JSONObject.toJSONString(new VMRequestParam(
                 VMRequestType.INSERT_DATA, lineProtocolData.substring(0, lineProtocolData.length() - 1)));
+        log.info("create table. databaseName:{} table:{}", databaseName, tableName);
         return new SQLQueryAdapter(query, errors, true);
     }
 

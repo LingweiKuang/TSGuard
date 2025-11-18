@@ -6,6 +6,7 @@ import com.fuzzy.common.oracle.TestOracle;
 import com.fuzzy.common.schema.AbstractSchema;
 import com.fuzzy.common.tsaf.EquationsManager;
 import com.fuzzy.common.tsaf.samplingfrequency.SamplingFrequencyManager;
+import lombok.extern.slf4j.Slf4j;
 
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 public abstract class ProviderAdapter<G extends GlobalState<O, ? extends AbstractSchema<G, ?>, C>, O extends DBMSSpecificOptions<? extends OracleFactory<G>>, C extends TSFuzzyDBConnection>
         implements DatabaseProvider<G, O, C> {
 
@@ -76,8 +78,7 @@ public abstract class ProviderAdapter<G extends GlobalState<O, ? extends Abstrac
         } finally {
             recordQueryExecutionStatistical(globalState);
             if (globalState.getOptions().isDropDatabase()) {
-                System.out.printf("database testing completed, dropping the database: %s%n",
-                        globalState.getDatabaseName());
+                log.info("database testing completed, dropping the database: {}", globalState.getDatabaseName());
                 dropDatabase(globalState);
                 EquationsManager.getInstance().deleteEquationsFromDatabase(globalState.getDatabaseName());
                 SamplingFrequencyManager.getInstance().deleteSamplingFrequencyFromDatabase(globalState.getDatabaseName());

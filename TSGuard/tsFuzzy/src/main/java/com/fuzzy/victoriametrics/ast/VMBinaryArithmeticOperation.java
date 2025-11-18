@@ -103,7 +103,7 @@ public class VMBinaryArithmeticOperation implements VMExpression {
         public abstract VMConstant apply(VMConstant left, VMConstant right);
 
         public static VMBinaryArithmeticOperator getRandom() {
-            return Randomly.fromOptions(values());
+            return Randomly.fromOptions(PLUS, SUBTRACT, MULTIPLY, DIVIDE, ATAN2);
         }
 
         public static VMBinaryArithmeticOperator getRandomOperatorForTimestamp() {

@@ -75,15 +75,14 @@ public class IotDBInsertGenerator {
         String databaseName = globalState.getDatabaseName();
         String tableName = table.getName();
         String databaseAndTableName = generateHashKey(databaseName, tableName);
-        int nrRows = 30;
         long startTimestamp = globalState.getNextSampleTimestamp(lastTimestamp.get(databaseAndTableName));
-        long endTimestamp = startTimestamp + nrRows * globalState.getOptions().getSamplingFrequency();
+        long endTimestamp = startTimestamp + IotDBTableGenerator.SAMPLING_NUMBER
+                * globalState.getOptions().getSamplingFrequency();
         SamplingFrequency samplingFrequency = SamplingFrequencyManager.getInstance()
                 .getSamplingFrequencyFromCollection(databaseName, tableName);
         List<Long> timestamps = samplingFrequency.apply(startTimestamp, endTimestamp);
         lastTimestamp.put(databaseAndTableName, endTimestamp);
-        for (int row = 0; row < nrRows; row++) {
-            long nextTimestamp = timestamps.get(row);
+        for (long nextTimestamp : timestamps) {
             sb.append("(");
             // timestamp -> 按照采样间隔顺序插入(起始时间戳 -> 至今)
             sb.append(nextTimestamp);

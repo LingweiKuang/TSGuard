@@ -452,7 +452,7 @@ public abstract class TimeSeriesStream {
                     res = firstDouble / secondDouble;
                     break;
                 case ATAN2_OPERATION:
-                    res = Math.atan2(secondDouble, firstDouble);
+                    res = Math.atan2(firstDouble, secondDouble);
                     break;
                 default:
                     throw new UnsupportedOperationException("Unsupported operation type: " + operationType);
@@ -470,6 +470,7 @@ public abstract class TimeSeriesStream {
             }
         } else if (DIVIDE_OPERATION.equals(operationType) && secondValue.compareTo(BigDecimal.ZERO) == 0) {
             // 除数为 0
+            // TODO 未判定 0 的正负数
             return firstValue.compareTo(BigDecimal.ZERO) == 0 ? NAN_BIGDECIMAL
                     : (firstValue.compareTo(BigDecimal.ZERO) > 0 ? INF_BIGDECIMAL : NEGATE_INF_BIGDECIMAL);
         }

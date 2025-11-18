@@ -1,15 +1,16 @@
-package com.fuzzy.prometheus.streamcomputing.parser;
+package com.fuzzy.victoriametrics.parser;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public class PrometheusLexer {
-    // PrometheusLexer => 词法分析器
+public class VMLexer {
+    // VMLexer => 词法分析器
+    // TODO 暂不可靠
     private final String s;
     private int p = 0;
 
-    public PrometheusLexer(String s) {
+    public VMLexer(String s) {
         this.s = s;
     }
 
@@ -185,13 +186,13 @@ public class PrometheusLexer {
      * @return
      */
     public static List<Token> tokenize(String promQL) {
-        PrometheusLexer lex = new PrometheusLexer(promQL);
-        List<PrometheusLexer.Token> tokens = new ArrayList<>();
-        PrometheusLexer.Token t;
+        VMLexer lex = new VMLexer(promQL);
+        List<VMLexer.Token> tokens = new ArrayList<>();
+        VMLexer.Token t;
         do {
             t = lex.next();
             tokens.add(t);
-        } while (t.type != PrometheusLexer.TokenType.EOF);
+        } while (t.type != VMLexer.TokenType.EOF);
         return tokens;
     }
 }

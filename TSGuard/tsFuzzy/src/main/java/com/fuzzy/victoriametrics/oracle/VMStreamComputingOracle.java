@@ -30,6 +30,7 @@ import com.fuzzy.victoriametrics.ast.VMTableReference;
 import com.fuzzy.victoriametrics.feedback.VMQuerySynthesisFeedbackManager;
 import com.fuzzy.victoriametrics.gen.VMExpressionGenerator;
 import com.fuzzy.victoriametrics.resultset.VMResultSet;
+import com.fuzzy.victoriametrics.streamcomputing.VMTimeSeriesVector;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
@@ -92,7 +93,7 @@ public class VMStreamComputingOracle
         // EndTime 随机选，预期结果集跟随 endtime
         VMRangeQueryRequest request = new VMRangeQueryRequest(metricQL, "1s",
                 globalState.getOptions().getStartTimestampOfTSData(),
-                globalState.getOptions().getStartTimestampOfTSData() + 100 * 1000);
+                globalState.getOptions().getStartTimestampOfTSData() + 50 * 1000);
         // INSTANT_QUERY or RANGE_QUERY
         return new SQLQueryAdapter(JSONObject.toJSONString(new VMRequestParam(VMRequestType.RANGE_QUERY,
                 JSONObject.toJSONString(request))), errors);
@@ -236,13 +237,15 @@ public class VMStreamComputingOracle
 
     private VerifyResultState verifyRowResult(TimeSeriesStream expectedResultSet, DBValResultSet result)
             throws Exception {
-        VMResultSet VMResultSet = (VMResultSet) result;
+        VMResultSet vmResultSet = (VMResultSet) result;
         // 解析 DBValResultSet
         try {
-            TimeSeriesStream actualResultSet = VMResultSet.genTimeSeriesStream();
+            // 转换为 VMTimeSeriesVector 进行值比较, VM 特色是忽略 NaN 数值
+            VMTimeSeriesVector actualResultSet = new VMTimeSeriesVector(
+                    (TimeSeriesStream.TimeSeriesVector) vmResultSet.genTimeSeriesStream());
             return actualResultSet.containsAndEquals(expectedResultSet) ? VerifyResultState.SUCCESS : VerifyResultState.FAIL;
         } catch (Exception e) {
-            log.error("解码 JSON 格式异常, json:{} e:", VMResultSet.getJsonResult(), e);
+            log.error("解码 JSON 格式异常, json:{} e:", vmResultSet.getJsonResult(), e);
             return VerifyResultState.FAIL;
         }
     }

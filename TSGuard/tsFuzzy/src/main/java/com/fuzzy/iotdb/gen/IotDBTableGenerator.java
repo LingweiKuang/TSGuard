@@ -6,6 +6,7 @@ import com.fuzzy.common.tsaf.samplingfrequency.SamplingFrequencyManager;
 import com.fuzzy.iotdb.IotDBGlobalState;
 
 public class IotDBTableGenerator {
+    public static final long SAMPLING_NUMBER = 30;
     private final StringBuilder sb = new StringBuilder();
     private final String tableName;
     private final IotDBGlobalState globalState;
@@ -15,10 +16,10 @@ public class IotDBTableGenerator {
         this.globalState = globalState;
         SamplingFrequencyManager.getInstance().addSamplingFrequency(globalState.getDatabaseName(), tableName,
                 globalState.getOptions().getStartTimestampOfTSData(),
-                30 * globalState.getOptions().getSamplingFrequency(), 30L);
+                SAMPLING_NUMBER * globalState.getOptions().getSamplingFrequency(), SAMPLING_NUMBER);
         SamplingFrequencyManager.getInstance().addSamplingFrequency(globalState.getDatabaseName(),
                 "aligned_" + tableName, globalState.getOptions().getStartTimestampOfTSData(),
-                30 * globalState.getOptions().getSamplingFrequency(), 30L);
+                SAMPLING_NUMBER * globalState.getOptions().getSamplingFrequency(), SAMPLING_NUMBER);
     }
 
     public static SQLQueryAdapter generate(IotDBGlobalState globalState, String tableName) {

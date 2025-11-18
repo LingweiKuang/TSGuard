@@ -32,7 +32,6 @@ public class VMStreamComputingVisitor extends ToStringVisitor<VMExpression> impl
         this.fetchColumnNames = fetchColumnNames;
         this.startTimestamp = startTimestamp;
         this.endTimestamp = endTimestamp;
-
         // TODO VM 空值去除
 //        TimeSeriesConstraint nullValueTimestamps = new TimeSeriesConstraint(VMConstantString.TIME_FIELD_NAME.getName(),
 //                new RangeConstraint());
@@ -125,6 +124,7 @@ public class VMStreamComputingVisitor extends ToStringVisitor<VMExpression> impl
         TimeSeriesStream left = timeSeriesStreamStack.pop();
 
         VMBinaryComparisonOperation.BinaryComparisonOperator operator = op.getOp();
+        // 标量/标量、向量/标量、向量/向量
         TimeSeriesStream timeSeriesStreamResult = switch (operator) {
             case EQUALS -> left.equal(right);
             case NOT_EQUALS -> left.notEqual(right);
@@ -135,32 +135,15 @@ public class VMStreamComputingVisitor extends ToStringVisitor<VMExpression> impl
             default -> throw new AssertionError();
         };
 //        TimeSeriesStream timeSeriesStreamResult;
-//        if (left.isVector() && right.isVector()) {
-//            // 向量/向量
+//        // TODO 仅仅 向量/向量 间不等号存在差异, 且满足右侧表达式为比较运算符，右侧标签(时间序列)和左侧一致的情况下，且为空
+//        if (left.isVector() && right.isVector()
+//                && VMBinaryComparisonOperation.BinaryComparisonOperator.NOT_EQUALS.equals(operator)
+//                && op.getRight() instanceof VMBinaryComparisonOperation) {
 //            VMTimeSeriesVector leftVector = new VMTimeSeriesVector((TimeSeriesStream.TimeSeriesVector) left);
 //            VMTimeSeriesVector rightVector = new VMTimeSeriesVector((TimeSeriesStream.TimeSeriesVector) right);
-//            VMBinaryComparisonOperation.BinaryComparisonOperator operator = op.getOp();
-//            timeSeriesStreamResult = switch (operator) {
-//                case EQUALS -> leftVector.equal(rightVector);
-//                case NOT_EQUALS -> leftVector.notEqual(rightVector);
-//                case GREATER -> leftVector.greaterThan(rightVector);
-//                case GREATER_EQUALS -> leftVector.greaterOrEqual(rightVector);
-//                case LESS -> leftVector.lessThan(rightVector);
-//                case LESS_EQUALS -> leftVector.lessOrEqual(rightVector);
-//                default -> throw new AssertionError();
-//            };
+//            timeSeriesStreamResult = leftVector.notEqual(rightVector);
 //        } else {
-//            // 标量/标量、向量/标量
-//            VMBinaryComparisonOperation.BinaryComparisonOperator operator = op.getOp();
-//            timeSeriesStreamResult = switch (operator) {
-//                case EQUALS -> left.equal(right);
-//                case NOT_EQUALS -> left.notEqual(right);
-//                case GREATER -> left.greaterThan(right);
-//                case GREATER_EQUALS -> left.greaterOrEqual(right);
-//                case LESS -> left.lessThan(right);
-//                case LESS_EQUALS -> left.lessOrEqual(right);
-//                default -> throw new AssertionError();
-//            };
+//
 //        }
 
         timeSeriesStreamStack.add(timeSeriesStreamResult);

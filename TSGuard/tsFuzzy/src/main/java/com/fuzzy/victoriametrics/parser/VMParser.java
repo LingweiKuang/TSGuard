@@ -1,17 +1,18 @@
-package com.fuzzy.prometheus.streamcomputing.parser;
+package com.fuzzy.victoriametrics.parser;
 
-import com.fuzzy.prometheus.PrometheusSchema;
-import com.fuzzy.prometheus.ast.*;
-import com.fuzzy.prometheus.streamcomputing.parser.PrometheusLexer.Token;
-import com.fuzzy.prometheus.streamcomputing.parser.PrometheusLexer.TokenType;
+import com.fuzzy.common.streamprocessing.constant.TimeSeriesLabelConstant;
+import com.fuzzy.victoriametrics.VMSchema;
+import com.fuzzy.victoriametrics.ast.*;
+import com.fuzzy.victoriametrics.parser.VMLexer.Token;
+import com.fuzzy.victoriametrics.parser.VMLexer.TokenType;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class PrometheusParser {
-    // PrometheusParser => 语法解析器
+public class VMParser {
+    // VMParser => 语法解析器
 
     // 拆分时序为 database, table, column
     private static final Pattern TIMESERIES_PARSE_PATTERN = Pattern.compile(
@@ -21,7 +22,7 @@ public class PrometheusParser {
     private final List<Token> tokens;
     private int idx = 0;
 
-    public PrometheusParser(List<Token> tokens) {
+    public VMParser(List<Token> tokens) {
         this.tokens = tokens;
     }
 
@@ -56,69 +57,69 @@ public class PrometheusParser {
     // cmpExpr := primary ( (>=|<=|>|<|==|!=) primary )?
     // primary := NUMBER | series | '(' expr ')'
     // series := IDENT '{' labelList '}'   // labels optional
-    public PrometheusExpression parseExpression() {
-        return parseOr();
+    public VMExpression parseExpression() {
+        return parseLogicalBinaryOp();
     }
 
-    private PrometheusExpression parseOr() {
-        PrometheusExpression left = parseArithmetic();
+    private VMExpression parseLogicalBinaryOp() {
+        VMExpression left = parseArithmeticOp();
         // 循环 AND OR UNLESS
         while (peek().getType() == TokenType.OR || peek().getType() == TokenType.AND
                 || peek().getType() == TokenType.UNLESS) {
             Token op = consume();
-            PrometheusExpression right = parseArithmetic();
-            left = new PrometheusBinaryLogicalOperation(left, right,
-                    PrometheusBinaryLogicalOperation.PrometheusBinaryLogicalOperator.getOperatorByText(op.getText()));
+            VMExpression right = parseArithmeticOp();
+            left = new VMBinaryLogicalOperation(left, right,
+                    VMBinaryLogicalOperation.VMBinaryLogicalOperator.getOperatorByText(op.getText()));
         }
         return left;
     }
 
-    private PrometheusExpression parseArithmetic() {
-        PrometheusExpression left = parseUnary();
+    private VMExpression parseArithmeticOp() {
+        VMExpression left = parseUnary();
         // 可循环连续 算数 操作
         while (peek().getType() == TokenType.MINUS || peek().getType() == TokenType.PLUS
                 || peek().getType() == TokenType.DIVIDE || peek().getType() == TokenType.MULTIPLY) {
             Token op = consume();
-            PrometheusExpression right = parseUnary();
-            left = new PrometheusBinaryArithmeticOperation(left, right,
-                    PrometheusBinaryArithmeticOperation.PrometheusBinaryArithmeticOperator.getOperatorByTextRepresentation(op.getText()));
+            VMExpression right = parseUnary();
+            left = new VMBinaryArithmeticOperation(left, right,
+                    VMBinaryArithmeticOperation.VMBinaryArithmeticOperator.getOperatorByTextRepresentation(op.getText()));
         }
         return left;
     }
 
-    private PrometheusExpression parseUnary() {
+    private VMExpression parseUnary() {
         if (peek().getType() == TokenType.PLUS || peek().getType() == TokenType.MINUS) {
             Token op = consume();
-            PrometheusExpression child = parseUnary();
-            return new PrometheusUnaryPrefixOperation(child,
-                    PrometheusUnaryPrefixOperation.PrometheusUnaryPrefixOperator.getPrometheusUnaryPrefixOperator(op.getText()));
+            VMExpression child = parseUnary();
+            return new VMUnaryPrefixOperation(child,
+                    VMUnaryPrefixOperation.VMUnaryPrefixOperator.getVMUnaryPrefixOperator(op.getText()));
         } else {
-            return parseComparison();
+            return parseComparisonBinaryOp();
         }
     }
 
-    private PrometheusExpression parseComparison() {
-        PrometheusExpression left = parsePrimary();
+    private VMExpression parseComparisonBinaryOp() {
+        VMExpression left = parsePrimary();
         TokenType t = peek().getType();
         if (t == TokenType.GE || t == TokenType.LE || t == TokenType.GT || t == TokenType.LT
                 || t == TokenType.EQ || t == TokenType.NE) {
             Token op = consume();
-            PrometheusExpression right = parsePrimary();
-            return new PrometheusBinaryComparisonOperation(left, right,
-                    PrometheusBinaryComparisonOperation.BinaryComparisonOperator.parseBinaryComparisonOperator(op.getText()));
+            VMExpression right = parsePrimary();
+            return new VMBinaryComparisonOperation(left, right,
+                    VMBinaryComparisonOperation.BinaryComparisonOperator.parseBinaryComparisonOperator(op.getText()));
         }
         return left;
     }
 
-    private PrometheusExpression parsePrimary() {
+    private VMExpression parsePrimary() {
         Token tk = peek();
         if (tk.getType() == TokenType.NUMBER) {
             consume();
-            return PrometheusConstant.createBigDecimalConstant(new BigDecimal(tk.getText()));
+            return VMConstant.createBigDecimalConstant(new BigDecimal(tk.getText()));
         }
         if (tk.getType() == TokenType.IDENTIFIER) {
             Token timeSeriesNameTk = consume();
-            // example: tsafdb_95_f3d74f6d_d5e8_4aa7_941e_794f16b7b42d{table="t1", timeSeries="c0"} => database{table="", timeSeries=""}
+            // example: tsafdb0_value{table="t1", timeSeries="c0"} => database{table="", timeSeries=""}
             String name = timeSeriesNameTk.getText();
 
             // 正则解析
@@ -127,9 +128,9 @@ public class PrometheusParser {
             String timeSeriesName = "";
             Matcher matcher = TIMESERIES_PARSE_PATTERN.matcher(name);
             if (matcher.find()) {
-                database = matcher.group("database");
-                tableName = matcher.group("table");
-                timeSeriesName = matcher.group("timeSeries");
+                database = matcher.group(TimeSeriesLabelConstant.DATABASE.getLabel());
+                tableName = matcher.group(TimeSeriesLabelConstant.TABLE.getLabel());
+                timeSeriesName = matcher.group(TimeSeriesLabelConstant.TIME_SERIES.getLabel());
             } else {
                 throw new RuntimeException("Invalid primary key expression, can not parse to time series. column name: "
                         + name);
@@ -137,13 +138,13 @@ public class PrometheusParser {
 
             // 解析为时间序列列
             // TODO GAUGE
-            PrometheusSchema.PrometheusColumn prometheusColumn = new PrometheusSchema.PrometheusColumn(
-                    timeSeriesName, false, PrometheusSchema.PrometheusDataType.GAUGE);
-            PrometheusSchema.PrometheusTable table = new PrometheusSchema.PrometheusTable(tableName, database,
-                    List.of(prometheusColumn), null);
-            prometheusColumn.setTable(table);
-            return new PrometheusColumnReference(prometheusColumn,
-                    PrometheusConstant.createBigDecimalConstant(BigDecimal.ONE));
+            VMSchema.VMColumn VMColumn = new VMSchema.VMColumn(
+                    timeSeriesName, false, VMSchema.VMDataType.GAUGE);
+            VMSchema.VMTable table = new VMSchema.VMTable(tableName, database,
+                    List.of(VMColumn), null);
+            VMColumn.setTable(table);
+            return new VMColumnReference(VMColumn,
+                    VMConstant.createBigDecimalConstant(BigDecimal.ONE));
         }
         if (tk.getType() == TokenType.BOOL) {
             // 忽略标量前缀 bool
@@ -153,7 +154,7 @@ public class PrometheusParser {
         if (tk.getType() == TokenType.LEFT_PAREN) {
             // 左括号
             consume();
-            PrometheusExpression inside = parseExpression();
+            VMExpression inside = parseExpression();
             expect(TokenType.RIGHT_PAREN);
             return inside;
         }

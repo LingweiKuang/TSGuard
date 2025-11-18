@@ -27,8 +27,8 @@ public class StreamGeneration {
                                                                           BigDecimal tolerance) {
         SamplingFrequency samplingFrequency = SamplingFrequencyManager.getInstance()
                 .getSamplingFrequencyFromCollection(databaseName, tableName);
-        // 获取原始向量时间戳集合
-        List<Long> timestamps = samplingFrequency.apply(startTimestamp, endTimestamp);
+        // 获取原始向量时间戳集合，VM 和 Prometheus 采取左闭右闭策略
+        List<Long> timestamps = samplingFrequency.applyClosedInterval(startTimestamp, endTimestamp);
 
         // 依据向量中时序不同(采样函数不一致), 生成对应采样值
         List<TimeSeriesElement> elements = new ArrayList<>();

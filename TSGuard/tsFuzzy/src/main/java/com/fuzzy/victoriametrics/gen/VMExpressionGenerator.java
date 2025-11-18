@@ -45,6 +45,7 @@ public class VMExpressionGenerator extends UntypedExpressionGenerator<VMExpressi
 
     private void initGenerator() {
         // TODO
+//        pairingProhibited.add(genHashKeyWithPairActions(Actions.BINARY_COMPARISON_OPERATION, Actions.BINARY_COMPARISON_OPERATION));
         // 查询有效性（靠标记规避语法不符合的节点）
         // 经过严格配对实验，以下各种组合均属于语法错误
     }

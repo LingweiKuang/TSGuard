@@ -110,7 +110,8 @@ public class VMBinaryComparisonOperation implements VMExpression {
         public abstract VMConstant getExpectedValue(VMConstant leftVal, VMConstant rightVal);
 
         public static BinaryComparisonOperator getRandom() {
-            return Randomly.fromOptions(BinaryComparisonOperator.values());
+            // TODO 暂时排除 != 这个存在 BUG 的运算符
+            return Randomly.fromOptions(EQUALS, LESS, LESS_EQUALS, GREATER, GREATER_EQUALS);
         }
 
         public abstract BinaryComparisonOperator reverseInequality();

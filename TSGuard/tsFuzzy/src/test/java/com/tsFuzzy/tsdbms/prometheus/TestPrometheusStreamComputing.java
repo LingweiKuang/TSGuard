@@ -10,9 +10,9 @@ import com.fuzzy.prometheus.PrometheusVisitor;
 import com.fuzzy.prometheus.ast.PrometheusExpression;
 import com.fuzzy.prometheus.gen.PrometheusInsertGenerator;
 import com.fuzzy.prometheus.gen.PrometheusTableGenerator;
+import com.fuzzy.prometheus.parser.PrometheusLexer;
+import com.fuzzy.prometheus.parser.PrometheusParser;
 import com.fuzzy.prometheus.streamcomputing.PrometheusTimeSeriesVector;
-import com.fuzzy.prometheus.streamcomputing.parser.PrometheusLexer;
-import com.fuzzy.prometheus.streamcomputing.parser.PrometheusParser;
 import org.junit.Test;
 
 import java.math.BigDecimal;

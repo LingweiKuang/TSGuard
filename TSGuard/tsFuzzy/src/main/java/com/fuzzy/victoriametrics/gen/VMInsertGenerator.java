@@ -42,7 +42,8 @@ public class VMInsertGenerator {
         if (!isRandomlyGenerateTimestamp.containsKey(hashKey)) {
             if (globalState.usesStreamComputing()) isRandomlyGenerateTimestamp.put(hashKey, false);
             else isRandomlyGenerateTimestamp.put(hashKey, Randomly.getBoolean());
-            lastTimestamp.put(hashKey, globalState.getOptions().getStartTimestampOfTSData());
+            lastTimestamp.put(hashKey, globalState.getOptions().getStartTimestampOfTSData()
+                    - globalState.getOptions().getSamplingFrequency());
         }
     }
 
@@ -68,29 +69,29 @@ public class VMInsertGenerator {
 
         String databaseName = globalState.getDatabaseName();
         String tableName = table.getName();
-        int nrRows = SAMPLING_NUMBER;
         String databaseAndTableName = generateHashKey(databaseName, tableName);
-        long startTimestamp = globalState.getNextSampleTimestamp(lastTimestamp.get(databaseAndTableName));
-        long endTimestamp = startTimestamp + nrRows * globalState.getOptions().getSamplingFrequency();
+        // 目前 lastTimestamp 存储的是最后一个已经插入数据库的数据点，因此当前数据点往后挪动一个采样间隔
+        long startTimestamp = globalState.getNextSampleTimestamp(lastTimestamp.get(databaseAndTableName))
+                + globalState.getOptions().getSamplingFrequency();
+        long endTimestamp = startTimestamp + (SAMPLING_NUMBER - 1) * globalState.getOptions().getSamplingFrequency();
         SamplingFrequency samplingFrequency = SamplingFrequencyManager.getInstance()
                 .getSamplingFrequencyFromCollection(databaseName, tableName);
-        List<Long> timestamps = samplingFrequency.apply(startTimestamp, endTimestamp);
+        List<Long> timestamps = samplingFrequency.applyClosedInterval(startTimestamp, endTimestamp);
         lastTimestamp.put(databaseAndTableName, endTimestamp);
-        for (int row = 0; row < nrRows; row++) {
+        for (long nextTimestamp : timestamps) {
             // timestamp -> 按照采样间隔顺序插入
-            long nextTimestamp = timestamps.get(row);
-            for (int c = 0; c < fieldColumns.size(); c++) {
+            for (VMSchema.VMColumn fieldColumn : fieldColumns) {
                 // 时间序列
                 sb.append(databaseName).append(",")
                         .append(TimeSeriesLabelConstant.TABLE.getLabel()).append("=").append(tableName).append(",");
-                String columnName = fieldColumns.get(c).getName();
+                String columnName = fieldColumn.getName();
                 sb.append(TimeSeriesLabelConstant.TIME_SERIES.getLabel()).append("=").append(columnName).append(" ");
                 sb.append("value")
                         .append("=");
                 // TODO TSAFDataType.INT
                 BigDecimal nextValue = EquationsManager.getInstance()
                         .initEquationsFromTimeSeries(databaseName, tableName, columnName, TSAFDataType.INT)
-                        .genValueByTimestamp(samplingFrequency, timestamps.get(row));
+                        .genValueByTimestamp(samplingFrequency, nextTimestamp);
                 // TODO NULL VALUE
                 sb.append(nextValue.doubleValue());
                 sb.append(" ").append(nextTimestamp).append("\n");
@@ -102,8 +103,8 @@ public class VMInsertGenerator {
         return lastTimestamp.get(generateHashKey(databaseName, tableName));
     }
 
-    public static Long addLastTimestamp(String databaseName, String tableName, long timestamp) {
-        return lastTimestamp.put(generateHashKey(databaseName, tableName), timestamp);
+    public static void putLastTimestamp(String databaseName, String tableName, long timestamp) {
+        lastTimestamp.put(generateHashKey(databaseName, tableName), timestamp);
     }
 
     public static String generateHashKey(String databaseName, String tableName) {

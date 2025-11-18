@@ -17,6 +17,7 @@ import java.util.List;
 
 @Slf4j
 public class TDengineTableGenerator {
+    public static final long SAMPLING_NUMBER = 30;
     private final StringBuilder sb = new StringBuilder();
     private final boolean allowPrimaryKey;
     private boolean setPrimaryKey;
@@ -32,7 +33,7 @@ public class TDengineTableGenerator {
         this.globalState = globalState;
         SamplingFrequencyManager.getInstance().addSamplingFrequency(globalState.getDatabaseName(), tableName,
                 globalState.getOptions().getStartTimestampOfTSData(),
-                30 * globalState.getOptions().getSamplingFrequency(), 30L);
+                SAMPLING_NUMBER * globalState.getOptions().getSamplingFrequency(), SAMPLING_NUMBER);
     }
 
     public static SQLQueryAdapter generate(TDengineGlobalState globalState, String tableName) {

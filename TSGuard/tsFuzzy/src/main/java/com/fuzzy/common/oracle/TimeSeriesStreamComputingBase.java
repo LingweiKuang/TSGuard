@@ -51,7 +51,6 @@ public abstract class TimeSeriesStreamComputingBase<S extends GlobalState<?, ?, 
         } else {
             // statistical
             incrementQueryExecutionCounter(QueryExecutionStatistical.QueryExecutionType.success);
-            log.info("有效查询: {}", timeseriesQuery.getQueryString());
         }
     }
 

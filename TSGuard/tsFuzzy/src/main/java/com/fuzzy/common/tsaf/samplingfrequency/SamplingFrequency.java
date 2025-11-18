@@ -1,6 +1,5 @@
 package com.fuzzy.common.tsaf.samplingfrequency;
 
-import com.fuzzy.Randomly;
 import com.fuzzy.common.constant.GlobalConstant;
 import com.fuzzy.common.tsaf.ConstraintValue;
 import com.fuzzy.common.tsaf.ConstraintValueGenerator;
@@ -11,21 +10,22 @@ import java.math.BigDecimal;
 import java.util.*;
 
 public class SamplingFrequency {
-    private int seed;
+    private final int seed;
     // 全局最初始时间戳
-    private Long startTimestamp;
+    private final Long startTimestamp;
     // 采样周期时间长度, 单位ms
-    private Long samplingPeriod;
+    private final Long samplingPeriod;
     // 每个采样周期内采样数目
-    private Long samplingNumber;
-    private SamplingFrequencyType type;
+    private final Long samplingNumber;
+    private final SamplingFrequencyType type;
 
     public SamplingFrequency(int seed, Long startTimestamp, Long samplingPeriod, Long samplingNumber) {
         this.seed = seed;
         this.startTimestamp = startTimestamp;
         this.samplingPeriod = samplingPeriod;
         this.samplingNumber = samplingNumber;
-        this.type = Randomly.fromOptions(SamplingFrequencyType.values());
+//        this.type = Randomly.fromOptions(SamplingFrequencyType.values());
+        this.type = SamplingFrequencyType.NORMAL_DISTRIBUTION;
     }
 
     public SamplingFrequency(int seed, Long startTimestamp, Long samplingPeriod, Long samplingNumber,
@@ -50,6 +50,19 @@ public class SamplingFrequency {
                 }
                 return timestamps;
             }
+
+            @Override
+            public List<Long> applyClosedInterval(Random random, long startTimestamp, long endTimestamp,
+                                                  long samplingPeriod, long samplingNumber) {
+                if (endTimestamp == startTimestamp) return Collections.singletonList(endTimestamp);
+
+                List<Long> timestamps = new ArrayList<>();
+                long interval = samplingPeriod / samplingNumber;
+                for (long timestamp = startTimestamp; timestamp <= endTimestamp; timestamp += interval) {
+                    timestamps.add(timestamp);
+                }
+                return timestamps;
+            }
         },
         NORMAL_DISTRIBUTION {
             @Override
@@ -58,24 +71,38 @@ public class SamplingFrequency {
                 // 默认最小采样 1s一个点
                 long minSamplingF = Long.parseLong("1" +
                         String.valueOf(samplingPeriod / samplingNumber).substring(1));
+                // mean 和 stdDev 需要和时间范围值(endTimestamp 和 startTimestamp)解耦
                 long min = 1;
-                long max = (endTimestamp - startTimestamp) / minSamplingF;
+                long max = samplingPeriod / minSamplingF;
                 double mean = (double) (max + min) / 2;
                 double stdDev = ((double) max - min) / 6;
 
                 Set<Long> uniqueNumbers = new HashSet<>();
-                while (uniqueNumbers.size() < samplingNumber) {
+                for (int i = 0; i < samplingNumber; i++) {
                     double value = mean + stdDev * random.nextGaussian();
                     int intValue = (int) Math.round(value);
-                    if (intValue >= min && intValue <= max)
-                        uniqueNumbers.add(startTimestamp + (intValue - 1) * minSamplingF);
+                    long timestamp = startTimestamp + (intValue - 1) * minSamplingF;
+                    if (intValue >= min && intValue <= max && timestamp <= endTimestamp)
+                        uniqueNumbers.add(timestamp);
                 }
                 return new ArrayList<>(uniqueNumbers);
+            }
+
+            @Override
+            public List<Long> applyClosedInterval(Random random, long startTimestamp, long endTimestamp,
+                                                  long samplingPeriod, long samplingNumber) {
+                if (startTimestamp == endTimestamp) {
+                    return new ArrayList<>();
+                }
+                return apply(random, startTimestamp, endTimestamp, samplingPeriod, samplingNumber);
             }
         };
 
         public abstract List<Long> apply(Random random, long startTimestamp, long endTimestamp, long samplingPeriod,
                                          long samplingNumber);
+
+        public abstract List<Long> applyClosedInterval(Random random, long startTimestamp, long endTimestamp, long samplingPeriod,
+                                                       long samplingNumber);
     }
 
     // 左闭右开
@@ -84,6 +111,17 @@ public class SamplingFrequency {
         assert (endTimestamp - startTimestamp) % samplingPeriod == 0;
         for (Long i = startTimestamp; i < endTimestamp; i += samplingPeriod) {
             results.addAll(type.apply(new Random(seed), i, i + samplingPeriod,
+                    samplingPeriod, samplingNumber));
+        }
+        Collections.sort(results);
+        return results;
+    }
+
+    // 左闭右闭
+    public List<Long> applyClosedInterval(long startTimestamp, long endTimestamp) {
+        List<Long> results = new ArrayList<>();
+        for (long i = startTimestamp; i <= endTimestamp; i += samplingPeriod) {
+            results.addAll(type.applyClosedInterval(new Random(seed), i, Math.min(i + samplingPeriod, endTimestamp),
                     samplingPeriod, samplingNumber));
         }
         Collections.sort(results);

@@ -37,6 +37,8 @@ public class HttpClientUtils {
     }
 
     public static String sendRequest(String url, String data, Map<String, String> heads, HttpRequestEnum requestType) {
+//        log.info("execute request: url:{} data:{} requestType:{}", url, data, requestType);
+//        outPoolingHttpClientConnectionState();
         switch (requestType) {
             case GET:
                 return get(url, heads);
@@ -57,10 +59,10 @@ public class HttpClientUtils {
     private static void outPoolingHttpClientConnectionState() {
         // 获取连接池的统计信息
         PoolStats totalStats = poolingConnManager.getTotalStats();
-        System.out.println("当前连接池总连接数: " + totalStats.getMax());
-        System.out.println("当前活动(Leased)连接数: " + totalStats.getLeased());
-        System.out.println("当前空闲(Available)连接数: " + totalStats.getAvailable());
-        System.out.println("当前等待(Pending)连接数: " + totalStats.getPending());
+        log.info("当前连接池总连接数: " + totalStats.getMax());
+        log.info("当前活动(Leased)连接数: " + totalStats.getLeased());
+        log.info("当前空闲(Available)连接数: " + totalStats.getAvailable());
+        log.info("当前等待(Pending)连接数: " + totalStats.getPending());
     }
 
     /**

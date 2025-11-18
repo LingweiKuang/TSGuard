@@ -70,9 +70,9 @@ public class PrometheusInsertGenerator {
         String databaseName = globalState.getDatabaseName();
         String tableName = table.getName();
         String databaseAndTableName = generateHashKey(databaseName, tableName);
-        int nrRows = (int) PrometheusTableGenerator.SAMPLING_NUMBER;
         long startTimestamp = globalState.getNextSampleTimestamp(lastTimestamp.get(databaseAndTableName));
-        long endTimestamp = startTimestamp + nrRows * globalState.getOptions().getSamplingFrequency();
+        long endTimestamp = startTimestamp + PrometheusTableGenerator.SAMPLING_NUMBER
+                * globalState.getOptions().getSamplingFrequency();
         SamplingFrequency samplingFrequency = SamplingFrequencyManager.getInstance()
                 .getSamplingFrequencyFromCollection(databaseName, tableName);
         List<Long> timestamps = samplingFrequency.apply(startTimestamp, endTimestamp);
@@ -86,11 +86,11 @@ public class PrometheusInsertGenerator {
             String columnName = column.getName();
             // random generate double val
             List<Double> doubles = new ArrayList<>();
-            for (int row = 0; row < nrRows; row++) {
+            for (Long timestamp : timestamps) {
                 // TODO TSAFDataType.INT
                 BigDecimal nextValue = EquationsManager.getInstance()
                         .initEquationsFromTimeSeries(databaseName, tableName, columnName, TSAFDataType.INT)
-                        .genValueByTimestamp(samplingFrequency, timestamps.get(row));
+                        .genValueByTimestamp(samplingFrequency, timestamp);
                 // TODO NULL VALUE
                 doubles.add(nextValue.doubleValue());
             }

@@ -125,16 +125,15 @@ public class TDengineInsertGenerator {
 
         String databaseName = globalState.getDatabaseName();
         String tableName = table.getName();
-        int nrRows = 30;
         String databaseAndTableName = generateHashKey(databaseName, tableName);
         long startTimestamp = globalState.getNextSampleTimestamp(lastTimestamp.get(databaseAndTableName));
-        long endTimestamp = startTimestamp + nrRows * globalState.getOptions().getSamplingFrequency();
+        long endTimestamp = startTimestamp + TDengineTableGenerator.SAMPLING_NUMBER
+                * globalState.getOptions().getSamplingFrequency();
         SamplingFrequency samplingFrequency = SamplingFrequencyManager.getInstance()
                 .getSamplingFrequencyFromCollection(databaseName, tableName);
         List<Long> timestamps = samplingFrequency.apply(startTimestamp, endTimestamp);
         lastTimestamp.put(databaseAndTableName, endTimestamp);
-        for (int row = 0; row < nrRows; row++) {
-            long nextTimestamp = timestamps.get(row);
+        for (long nextTimestamp : timestamps) {
             // device id
             int deviceNumber = 1;
             while (deviceNumber > 0) {
