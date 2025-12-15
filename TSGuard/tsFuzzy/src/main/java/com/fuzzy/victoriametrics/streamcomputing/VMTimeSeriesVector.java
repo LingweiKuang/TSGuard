@@ -9,7 +9,6 @@ import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -159,77 +158,77 @@ public class VMTimeSeriesVector extends TimeSeriesStream.TimeSeriesVector implem
      * @param other
      * @return
      */
-    @Override
-    public TimeSeriesStream comparisonBinaryOperation(TimeSeriesStream other, BiFunction<BigDecimal, BigDecimal, BigDecimal> op) {
-        // TODO 仅不等号使用当前 comparisonBinaryOperation
-        // 获取满足不等号判定的运算组合，即破除 ==, <=, >=, <, > 限制，即取三组数使得组合满足的同时，能够说明 op 非其他比较运算符
-        // ==: 不满足 op.apply(BigDecimal.ONE, BigDecimal.ONE).compareTo(BigDecimal.ZERO) == 0
-        // >, >=: 不满足 op.apply(BigDecimal.ONE, BigDecimal.TEN).compareTo(BigDecimal.ONE) == 0
-        // <, <=: 不满足 op.apply(BigDecimal.TEN, BigDecimal.ONE).compareTo(BigDecimal.ONE) == 0
-        if (!(op.apply(BigDecimal.ONE, BigDecimal.ONE).compareTo(BigDecimal.ZERO) == 0
-                && op.apply(BigDecimal.ONE, BigDecimal.TEN).compareTo(BigDecimal.ONE) == 0
-                && op.apply(BigDecimal.TEN, BigDecimal.ONE).compareTo(BigDecimal.ONE) == 0)) {
-            return super.comparisonBinaryOperation(other, op);
-        }
-        if (other instanceof TimeSeriesScalar scalar) {
-            // 针对每个 element 均执行二元比较操作
-            Map<String, TimeSeriesElement> updatedElements = this.getElements().entrySet().stream()
-                    .map(entry -> {
-                        // 针对每个 element 内部的值元素进行 op 操作 => 满足条件保留
-                        TimeSeriesElement element = entry.getValue();
-                        Map<Long, BigDecimal> updatedValues = element.getValues().entrySet().stream()
-                                .filter(timestampToValues -> {
-                                    BigDecimal apply = op.apply(timestampToValues.getValue(), scalar.getScalarValue());
-                                    return apply.compareTo(BigDecimal.ONE) == 0;
-                                }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-
-                        // 过滤掉 updatedValues 为空的时间序列元素
-                        if (updatedValues.isEmpty()) {
-                            return null;
-                        }
-
-                        return Map.entry(entry.getKey(), new TimeSeriesElement(element.getName(),
-                                new HashMap<>(element.getLabelSets()), updatedValues));
-                    })
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-            return new TimeSeriesVector(updatedElements);
-        } else if (other instanceof TimeSeriesVector rightTimeSeriesVector) {
-            // 保留左侧全部元素, 若右侧无法匹配 value 值, 则丢弃, 成功匹配则相互操作
-            Map<String, TimeSeriesElement> updatedElements = new HashMap<>();
-            this.getElements().forEach((hashKey, element) -> {
-                // TODO 右侧为空值的情况下, 直接返回左值
-                if (rightTimeSeriesVector.getElements().isEmpty()) {
-                    updatedElements.put(hashKey, new TimeSeriesElement(element.getName(),
-                            new HashMap<>(element.getLabelSets()), element.getValues()));
-                    return;
-                } else if (!rightTimeSeriesVector.getElements().containsKey(hashKey)) {
-                    // 右侧找不到匹配的标签值, 忽略该元素
-                    return;
-                }
-
-                Map<Long, BigDecimal> leftTimestampToValues = element.getValues();
-                Map<Long, BigDecimal> rightTimestampToValues = rightTimeSeriesVector.getElements().get(hashKey).getValues();
-                // 处理右侧存在对应时间戳的 value 值, 进行 op 比较, 晒出满足条件的值
-                Map<Long, BigDecimal> streamComputeValues = new HashMap<>();
-                leftTimestampToValues.forEach((timestamp, value) -> {
-                    if (rightTimestampToValues.containsKey(timestamp)) {
-                        BigDecimal apply = op.apply(value, rightTimestampToValues.get(timestamp));
-                        if (apply.compareTo(BigDecimal.ONE) == 0) {
-                            streamComputeValues.put(timestamp, value);
-                        }
-                    }
-                });
-
-                // 存在计算值
-                if (!streamComputeValues.isEmpty()) {
-                    updatedElements.put(hashKey, new TimeSeriesElement(element.getName(),
-                            new HashMap<>(element.getLabelSets()), streamComputeValues));
-                }
-            });
-            return new TimeSeriesVector(updatedElements);
-        } else {
-            throw new UnsupportedOperationException("Unsupported stream type");
-        }
-    }
+//    @Override
+//    public TimeSeriesStream comparisonBinaryOperation(TimeSeriesStream other, BiFunction<BigDecimal, BigDecimal, BigDecimal> op) {
+//        // TODO 仅不等号使用当前 comparisonBinaryOperation
+//        // 获取满足不等号判定的运算组合，即破除 ==, <=, >=, <, > 限制，即取三组数使得组合满足的同时，能够说明 op 非其他比较运算符
+//        // ==: 不满足 op.apply(BigDecimal.ONE, BigDecimal.ONE).compareTo(BigDecimal.ZERO) == 0
+//        // >, >=: 不满足 op.apply(BigDecimal.ONE, BigDecimal.TEN).compareTo(BigDecimal.ONE) == 0
+//        // <, <=: 不满足 op.apply(BigDecimal.TEN, BigDecimal.ONE).compareTo(BigDecimal.ONE) == 0
+//        if (!(op.apply(BigDecimal.ONE, BigDecimal.ONE).compareTo(BigDecimal.ZERO) == 0
+//                && op.apply(BigDecimal.ONE, BigDecimal.TEN).compareTo(BigDecimal.ONE) == 0
+//                && op.apply(BigDecimal.TEN, BigDecimal.ONE).compareTo(BigDecimal.ONE) == 0)) {
+//            return super.comparisonBinaryOperation(other, op);
+//        }
+//        if (other instanceof TimeSeriesScalar scalar) {
+//            // 针对每个 element 均执行二元比较操作
+//            Map<String, TimeSeriesElement> updatedElements = this.getElements().entrySet().stream()
+//                    .map(entry -> {
+//                        // 针对每个 element 内部的值元素进行 op 操作 => 满足条件保留
+//                        TimeSeriesElement element = entry.getValue();
+//                        Map<Long, BigDecimal> updatedValues = element.getValues().entrySet().stream()
+//                                .filter(timestampToValues -> {
+//                                    BigDecimal apply = op.apply(timestampToValues.getValue(), scalar.getScalarValue());
+//                                    return apply.compareTo(BigDecimal.ONE) == 0;
+//                                }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+//
+//                        // 过滤掉 updatedValues 为空的时间序列元素
+//                        if (updatedValues.isEmpty()) {
+//                            return null;
+//                        }
+//
+//                        return Map.entry(entry.getKey(), new TimeSeriesElement(element.getName(),
+//                                new HashMap<>(element.getLabelSets()), updatedValues));
+//                    })
+//                    .filter(Objects::nonNull)
+//                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+//            return new TimeSeriesVector(updatedElements);
+//        } else if (other instanceof TimeSeriesVector rightTimeSeriesVector) {
+//            // 保留左侧全部元素, 若右侧无法匹配 value 值, 则丢弃, 成功匹配则相互操作
+//            Map<String, TimeSeriesElement> updatedElements = new HashMap<>();
+//            this.getElements().forEach((hashKey, element) -> {
+//                // TODO 右侧为空值的情况下, 直接返回左值
+//                if (rightTimeSeriesVector.getElements().isEmpty()) {
+//                    updatedElements.put(hashKey, new TimeSeriesElement(element.getName(),
+//                            new HashMap<>(element.getLabelSets()), element.getValues()));
+//                    return;
+//                } else if (!rightTimeSeriesVector.getElements().containsKey(hashKey)) {
+//                    // 右侧找不到匹配的标签值, 忽略该元素
+//                    return;
+//                }
+//
+//                Map<Long, BigDecimal> leftTimestampToValues = element.getValues();
+//                Map<Long, BigDecimal> rightTimestampToValues = rightTimeSeriesVector.getElements().get(hashKey).getValues();
+//                // 处理右侧存在对应时间戳的 value 值, 进行 op 比较, 晒出满足条件的值
+//                Map<Long, BigDecimal> streamComputeValues = new HashMap<>();
+//                leftTimestampToValues.forEach((timestamp, value) -> {
+//                    if (rightTimestampToValues.containsKey(timestamp)) {
+//                        BigDecimal apply = op.apply(value, rightTimestampToValues.get(timestamp));
+//                        if (apply.compareTo(BigDecimal.ONE) == 0) {
+//                            streamComputeValues.put(timestamp, value);
+//                        }
+//                    }
+//                });
+//
+//                // 存在计算值
+//                if (!streamComputeValues.isEmpty()) {
+//                    updatedElements.put(hashKey, new TimeSeriesElement(element.getName(),
+//                            new HashMap<>(element.getLabelSets()), streamComputeValues));
+//                }
+//            });
+//            return new TimeSeriesVector(updatedElements);
+//        } else {
+//            throw new UnsupportedOperationException("Unsupported stream type");
+//        }
+//    }
 }

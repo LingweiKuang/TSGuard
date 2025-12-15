@@ -120,10 +120,4 @@ public class TestVMStreamComputing {
         System.out.println(timeSeriesStream);
     }
 
-    @Test
-    public void test() {
-        System.out.println(Math.atan2(1, Double.POSITIVE_INFINITY));
-        System.out.println(Math.atan2(Double.POSITIVE_INFINITY, 1));
-    }
-
 }

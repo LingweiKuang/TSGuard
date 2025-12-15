@@ -53,15 +53,16 @@ public class VMToStringVisitor extends ToStringVisitor<VMExpression> implements 
 
     @Override
     public void visit(VMColumnReference column) {
-        String databaseName = column.getColumn().getTable().getDatabaseName();
-        String tableName = column.getColumn().getTable().getName();
-        String columnName = column.getColumn().getName();
-        String timeSeriesName = String.format("%s{table=\"%s\", timeSeries=\"%s\"}",
-                databaseName + TimeSeriesLabelConstant.END_WITH_VALUE.getLabel(), tableName, columnName);
-        // TODO
-//        if (isAbstractExpression && !columnName.equalsIgnoreCase(VMConstantString.TIME_FIELD_NAME.getName()))
-//            columnName = GlobalConstant.COLUMN_NAME;
-        sb.append(timeSeriesName);
+        if (!isAbstractExpression) {
+            String databaseName = column.getColumn().getTable().getDatabaseName();
+            String tableName = column.getColumn().getTable().getName();
+            String columnName = column.getColumn().getName();
+            String timeSeriesName = String.format("%s{table=\"%s\", timeSeries=\"%s\"}",
+                    databaseName + TimeSeriesLabelConstant.END_WITH_VALUE.getLabel(), tableName, columnName);
+            sb.append(timeSeriesName);
+        } else {
+            sb.append(GlobalConstant.COLUMN_NAME);
+        }
     }
 
     public void visitDoubleValueLeft(VMConstant constant) {
@@ -178,8 +179,9 @@ public class VMToStringVisitor extends ToStringVisitor<VMExpression> implements 
 //                || unaryOperation.getExpression() instanceof VMBinaryLogicalOperation
 //                || unaryOperation.getExpression() instanceof VMUnaryPrefixOperation
 //                || unaryOperation.getExpression() instanceof VMBinaryArithmeticOperation
-////                || unaryOperation.getExpression() instanceof VMBinaryOperation
-////                || unaryOperation.getExpression() instanceof VMComputableFunction
+
+    /// /                || unaryOperation.getExpression() instanceof VMBinaryOperation
+    /// /                || unaryOperation.getExpression() instanceof VMComputableFunction
 //        )
 //            sb.append(" == ");
 //
@@ -191,7 +193,6 @@ public class VMToStringVisitor extends ToStringVisitor<VMExpression> implements 
 //        if (!unaryOperation.omitBracketsWhenPrinting()) sb.append(')');
 //        if (!unaryOperation.omitBracketsWhenPrinting()) sb.append(')');
 //    }
-
     @Override
     public void visit(VMBinaryArithmeticOperation op) {
         sb.append("(");

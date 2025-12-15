@@ -6,7 +6,7 @@ import com.fuzzy.common.DBMSCommon;
 import com.fuzzy.common.constant.GlobalConstant;
 import com.fuzzy.common.query.SQLQueryAdapter;
 import com.fuzzy.common.query.SQLQueryProvider;
-import com.fuzzy.prometheus.apiEntry.PrometheusQueryParam;
+import com.fuzzy.prometheus.apiEntry.PrometheusDeleteParam;
 import com.fuzzy.prometheus.apiEntry.PrometheusRequestType;
 import com.fuzzy.prometheus.gen.PrometheusDatabaseGenerator;
 import com.fuzzy.prometheus.gen.PrometheusDeleteSeriesGenerator;
@@ -129,12 +129,14 @@ public class PrometheusProvider extends SQLProviderAdapter<PrometheusGlobalState
     @Override
     public void dropDatabase(PrometheusGlobalState globalState) throws Exception {
         // POST /api/v1/admin/tsdb/delete_series
-        String databaseMatch = String.format("match[]={__name__=\"%s\"}", globalState.getDatabaseName());
         // 删除时间序列
         try (TSFuzzyStatement s = globalState.getConnection().createStatement()) {
-            String deleteRequest = new PrometheusQueryParam(databaseMatch)
+            long startTime = globalState.getOptions().getStartTimestampOfTSData() - 7200 * 1000;
+            long endTime = System.currentTimeMillis();
+            String deleteParam = new PrometheusDeleteParam(globalState.getDatabaseName(), startTime, endTime)
                     .genPrometheusRequestParam(PrometheusRequestType.SERIES_DELETE);
-            s.execute(deleteRequest);
+            ;
+            s.execute(deleteParam);
         }
     }
 

@@ -132,7 +132,7 @@ public class PrometheusStreamComputingOracle
             }
         } while (reGenerateExpr);
 
-        log.info("Expression: {}", PrometheusVisitor.asString(predicateExpression));
+//        log.info("Expression: {}", PrometheusVisitor.asString(predicateExpression));
         this.predicate = predicateExpression;
         this.predicateSequence = predicateSequence;
         return predicateExpression;

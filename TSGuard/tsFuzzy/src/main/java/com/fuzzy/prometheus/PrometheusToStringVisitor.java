@@ -31,7 +31,6 @@ public class PrometheusToStringVisitor extends ToStringVisitor<PrometheusExpress
     @Override
     public void visit(PrometheusTableReference ref) {
         if (!isAbstractExpression) {
-            // TODO
             sb.append(ref.getTable().getName());
         } else sb.append(GlobalConstant.TABLE_NAME);
     }
@@ -50,14 +49,15 @@ public class PrometheusToStringVisitor extends ToStringVisitor<PrometheusExpress
 
     @Override
     public void visit(PrometheusColumnReference column) {
-        String databaseName = column.getColumn().getTable().getDatabaseName();
-        String tableName = column.getColumn().getTable().getName();
-        String columnName = column.getColumn().getName();
-        String timeSeriesName = String.format("%s{table=\"%s\", timeSeries=\"%s\"}", databaseName, tableName, columnName);
-        // TODO
-//        if (isAbstractExpression && !columnName.equalsIgnoreCase(PrometheusConstantString.TIME_FIELD_NAME.getName()))
-//            columnName = GlobalConstant.COLUMN_NAME;
-        sb.append(timeSeriesName);
+        if (!isAbstractExpression) {
+            String databaseName = column.getColumn().getTable().getDatabaseName();
+            String tableName = column.getColumn().getTable().getName();
+            String columnName = column.getColumn().getName();
+            String timeSeriesName = String.format("%s{table=\"%s\", timeSeries=\"%s\"}", databaseName, tableName, columnName);
+            sb.append(timeSeriesName);
+        } else {
+            sb.append(GlobalConstant.COLUMN_NAME);
+        }
     }
 
     public void visitDoubleValueLeft(PrometheusConstant constant) {

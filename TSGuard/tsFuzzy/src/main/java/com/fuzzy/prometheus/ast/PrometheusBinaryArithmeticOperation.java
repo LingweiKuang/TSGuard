@@ -103,7 +103,7 @@ public class PrometheusBinaryArithmeticOperation implements PrometheusExpression
         public abstract PrometheusConstant apply(PrometheusConstant left, PrometheusConstant right);
 
         public static PrometheusBinaryArithmeticOperator getRandom() {
-            return Randomly.fromOptions(values());
+            return Randomly.fromOptions(PLUS, SUBTRACT, MULTIPLY, DIVIDE, ATAN2);
         }
 
         public static PrometheusBinaryArithmeticOperator getRandomOperatorForTimestamp() {

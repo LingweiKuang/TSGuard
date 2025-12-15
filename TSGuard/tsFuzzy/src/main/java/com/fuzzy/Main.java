@@ -10,6 +10,8 @@ import com.fuzzy.common.query.Query;
 import com.fuzzy.common.tsaf.ConstraintValue;
 import com.fuzzy.influxdb.feedback.InfluxDBQuerySynthesisFeedbackManager;
 import com.fuzzy.iotdb.feedback.IotDBQuerySynthesisFeedbackManager;
+import com.fuzzy.prometheus.feedback.PrometheusQuerySynthesisFeedbackManager;
+import com.fuzzy.victoriametrics.feedback.VMQuerySynthesisFeedbackManager;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
@@ -695,6 +697,30 @@ public final class Main {
 
         // query syntax sequence number
         sb.append(String.format("查询语法序列数目:%s\n", InfluxDBQuerySynthesisFeedbackManager.querySynthesisFeedback.getSequenceNumber()));
+
+        sb.append(String.format("invalidQueryCounter:%s\n", ConstraintValue.counter));
+
+        // Prometheus
+        // record expression depth
+        sb.append(String.format("Prometheus表达式迭代深度:%d\n", PrometheusQuerySynthesisFeedbackManager.expressionDepth.get()));
+
+        // query execution statistical
+        sb.append(String.format("查询统计信息:%s\n", PrometheusQuerySynthesisFeedbackManager.queryExecutionStatistical));
+
+        // query syntax sequence number
+        sb.append(String.format("查询语法序列数目:%s\n", PrometheusQuerySynthesisFeedbackManager.querySynthesisFeedback.getSequenceNumber()));
+
+        sb.append(String.format("invalidQueryCounter:%s\n", ConstraintValue.counter));
+
+        // VictoriaMetrics
+        // record expression depth
+        sb.append(String.format("VictoriaMetrics表达式迭代深度:%d\n", VMQuerySynthesisFeedbackManager.expressionDepth.get()));
+
+        // query execution statistical
+        sb.append(String.format("查询统计信息:%s\n", VMQuerySynthesisFeedbackManager.queryExecutionStatistical));
+
+        // query syntax sequence number
+        sb.append(String.format("查询语法序列数目:%s\n", VMQuerySynthesisFeedbackManager.querySynthesisFeedback.getSequenceNumber()));
 
         sb.append(String.format("invalidQueryCounter:%s\n", ConstraintValue.counter));
 
